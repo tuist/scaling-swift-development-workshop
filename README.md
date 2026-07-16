@@ -47,15 +47,20 @@ mise install     # Node + hyperfine, pinned — native on Apple Silicon, no Rose
 
 ## Running the workshop
 
-Everything happens through the workshop runner:
-
 ```bash
 mise run workshop
 ```
 
-It shows you the current task, explains the *why*, runs the benchmarks, and
-validates your work. Progress and measurements live in `.workshop/` — local to
-you, never committed.
+The runner explains each task and checks your work. It does **not** do the work.
+You run the commands yourself, in your own terminal — you're here to leave able to
+do this to your own project, and nobody ever learned `hyperfine` by watching
+someone else's spinner.
+
+Each task states a goal and why it matters. The commands are there when you want
+them, behind **Give me a hint** and **Show me the commands** — but try first. The
+attempt is the part that sticks.
+
+Progress and measurements live in `.workshop/` — local to you, never committed.
 
 ```
 ┌  ◆ Scaling Swift Development · workshop
@@ -70,19 +75,18 @@ you, never committed.
 
 ## How measurement works
 
-Every task is judged against the **baseline** you record in Task 1. The runner
-uses [`hyperfine`](https://github.com/sharkdp/hyperfine) to benchmark four things
-that fail independently:
+Every task is judged against the **baseline** you take in Task 1, with
+[`hyperfine`](https://github.com/sharkdp/hyperfine) — the same tool from the talk.
+You run it; it writes JSON into `.workshop/measurements/`; the runner reads those
+files back and tells you whether the number moved more than the noise.
 
-| Metric | Why it's separate |
-| --- | --- |
-| **Resolve packages** | SwiftPM git-clones every dependency, with full history. |
-| **Clean build** | What CI pays every run, and you pay after every clean. |
-| **Incremental build** | Nothing changed. Should be free. Find out whether it is. |
-| **Rebuild after touching `Core`** | The god-module tax — the number that hurts most. |
+The number we chase all day is the **clean build**: it's what CI pays on every
+run, and it's what most of the day's changes actually improve.
 
-Benchmarks run against a **dedicated `.workshop/DerivedData`**, so nothing the
-workshop does touches your normal Xcode caches.
+Your benchmarks build into a **dedicated `.workshop/DerivedData`** with their own
+compilation cache under `.workshop/`, so nothing here touches the Xcode caches
+your day job depends on — and so you can throw the cache away on purpose when a
+task asks you to.
 
 ## If you get stuck
 

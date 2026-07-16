@@ -1,168 +1,86 @@
-import * as p from "@clack/prompts";
-import {
-  benchmark,
-  loadMeasurement,
-  metricBlurbs,
-  metricRoughSeconds,
-  metricTitles,
-  saveMeasurement,
-  type MetricKey,
-  type Stat,
-} from "../measure.js";
-import { renderMachine, renderMeasurement } from "../report.js";
+import { buildEnv, cleanBuild, incrementalBuild, labels, resolvePackages } from "../commands.js";
+import { readMeasurement } from "../measure.js";
+import { renderTable } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
-import { note } from "../ui.js";
 import { hasBinary } from "../shell.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
 
-const REQUIRED_METRICS: MetricKey[] = ["resolve", "cleanBuild", "incremental", "touchCore"];
-
 const brief = `${brand.bold("You can't improve what you can't see.")}
 
-Right now nobody in this room can say what RockyFeed actually costs. Not "it feels
-slow" — a number, with a spread, that you can repeat tomorrow and compare against.
+Nobody here can yet say what RockyFeed costs. Not "it feels slow" — a number,
+with a spread, that you can repeat tomorrow and compare against.
 
-That's the whole job of this first task, and it's the one step you can't skip:
-every later change we make is judged against the numbers you take right now.
+Every change we make today is judged against the numbers you take now.
 
-${brand.bold("We measure four things")}, because "the build is slow" is never one problem:
+${brand.bold("Your job")}
+Measure two things, and save each one into ${brand.accent(".workshop/measurements/")} so the
+runner can read it back:
 
-  ${brand.accent("Clean build")}        ${brand.bold("The one we chase.")} What CI pays on every run, and what
-                      you pay after every clean. Most of today aims here.
-  ${brand.accent("Resolve packages")}   SwiftPM git-clones every dependency, with full history.
-  ${brand.accent("Incremental build")}  Changed nothing, built again. Should be free. Watch.
-  ${brand.accent("One line in Core")}   A spacing constant in the design system. A diagnostic, not
-                      a target — see below.
+  ${brand.accent("Clean build")}   ${labels.baselineClean}${brand.dim(".json")}
+                ${brand.bold("The number we chase.")} What CI pays on every run.
 
-${brand.bold("Why hyperfine?")}
-Because timing a build once tells you almost nothing. Machines are noisy: thermal
-state, Spotlight, the browser you left open. hyperfine runs the command repeatedly
-and reports ${brand.dim("mean ± σ")}, so later you can tell a real win from luck.
+  ${brand.accent("No-op build")}   ${labels.baselineIncremental}${brand.dim(".json")}
+                Built again, changed nothing. Should be free. Find out.
 
-${brand.bold("Do this now")}
-Pick ${brand.accent("Measure the baseline")} below. It will take a few minutes — that wait is
-not wasted time, it ${brand.bold("is")} the point. It's the wait your team pays all day.
+${brand.bold("The tool")}
+${brand.accent("hyperfine")} is already installed. Timing a build once tells you almost nothing
+— machines are noisy — so it runs a command repeatedly and reports ${brand.dim("mean ± σ")}. It
+can also reset state between runs, and export JSON.
 
-${brand.dim("Nothing about the project changes in this task. We only look at it.")}`;
+${brand.bold("Have a go first.")} ${brand.dim("`hyperfine --help` is a good start. Those two")}
+${brand.dim("measurements are not the same shape as each other, and working out why is most")}
+${brand.dim("of the lesson. There's a hint below when you want one.")}`;
 
-type Depth = "quick" | "standard";
+const hint = `${brand.bold("Three flags do the work.")}
 
-const runsFor = (depth: Depth): number => (depth === "quick" ? 1 : 3);
+  ${brand.accent("--export-json <path>")}   writes the result where the runner can read it
+  ${brand.accent("--prepare '<cmd>'")}      runs before ${brand.bold("each")} timed run, untimed
+  ${brand.accent("--warmup <n>")}           untimed runs first, to settle things down
 
-const measureBaseline = async (): Promise<void> => {
-  if (!(await hasBinary("hyperfine"))) {
-    p.log.error(
-      `hyperfine isn't installed. Run ${brand.accent("mise install")} in the repo root and try again.`,
-    );
-    return;
-  }
+${brand.bold("Now the thinking part.")}
 
-  const existing = await loadMeasurement("baseline");
-  if (existing) {
-    const again = await p.confirm({
-      message: "A baseline already exists. Measure again and overwrite it?",
-      initialValue: false,
-    });
-    if (p.isCancel(again) || !again) {
-      p.log.info("Kept the existing baseline.");
-      return;
-    }
-  }
+A ${brand.bold("clean build")} must start from nothing every time, so something has to throw the
+build products away before each run — but ${brand.bold("only")} the products. Wipe all of
+DerivedData and you'd re-resolve the packages too, and end up measuring that
+instead.
 
-  const estimate = (runs: number): string => {
-    const total = REQUIRED_METRICS.reduce((sum, key) => sum + metricRoughSeconds[key] * runs, 0);
-    return formatDuration(total);
-  };
+Same trap from the other side: if the packages have ${brand.bold("never")} been resolved, your
+first run resolves them and the rest don't. That doesn't average out — it lands
+entirely in run 1 and drags the mean somewhere meaningless. Resolve once, up
+front, untimed. Resolving and building are different stages, and the point is to
+time them separately.
 
-  const depthOptions: Array<{ value: Depth; label: string; hint: string }> = [
-    {
-      value: "quick",
-      label: "Quick — 1 run each",
-      hint: `~${estimate(1)}, no error bars. Fine for a first look.`,
-    },
-    {
-      value: "standard",
-      label: "Standard — 3 runs each (recommended)",
-      hint: `~${estimate(3)}. Gives you mean ± σ, which is what you actually want.`,
-    },
-  ];
+A ${brand.bold("no-op build")} has the opposite problem. It needs no resetting; it needs the
+build to be ${brand.bold("already done")} before the clock starts. If the tree is stale when you
+begin, your first run measures a real rebuild and the mean is a work of fiction.
 
-  const depth = await p.select({
-    message: "How thorough should the baseline be?",
-    options: depthOptions,
-    initialValue: "standard" as Depth,
-  });
-  if (p.isCancel(depth)) return;
+${brand.dim("The talk's hyperfine slide has the shape of it. Or take the next reveal and")}
+${brand.dim("get on with your day.")}`;
 
-  const runs = runsFor(depth);
-  if (runs === 1) {
-    p.log.warn(
-      "One run per benchmark means no standard deviation. You won't be able to tell small wins from noise.",
-    );
-  }
+const commands = `${brand.dim("Run these from the repo root, in your own terminal.")}
 
-  p.log.info(
-    `Benchmarking with hyperfine. Grab a coffee — and notice how long this takes.`,
-  );
+${brand.bold("Set the build command once")} ${brand.dim("— every benchmark today reuses it, which is")}
+${brand.dim("what keeps the comparisons honest.")}
 
-  const metrics: Partial<Record<MetricKey, Stat>> = {};
+${buildEnv}
 
-  for (const key of REQUIRED_METRICS) {
-    const spinner = p.spinner();
-    spinner.start(`${metricTitles[key]} — ${brand.dim(metricBlurbs[key])}`);
-    const startedAt = Date.now();
-    try {
-      const stat = await benchmark(key, runs);
-      metrics[key] = stat;
-      spinner.stop(
-        `${metricTitles[key]}  ${brand.bold(formatDuration(stat.mean))}` +
-          (stat.runs > 1 ? ` ${brand.dim(`± ${formatDuration(stat.stddev)}`)}` : ""),
-      );
-    } catch (error) {
-      const elapsed = formatDuration((Date.now() - startedAt) / 1000);
-      spinner.stop(`${metricTitles[key]} — failed after ${elapsed}`, 1);
-      p.log.error(error instanceof Error ? error.message : String(error));
-      p.log.info(
-        "Fix the error above and run the measurement again. A partial baseline isn't much use.",
-      );
-      return;
-    }
-  }
+${brand.bold("1. Resolve the packages first")} ${brand.dim("— once, untimed. Otherwise your first")}
+${brand.dim("clean build also clones Alamofire and Kingfisher, and you've measured resolution.")}
 
-  const measurement = await saveMeasurement("baseline", metrics);
+${resolvePackages}
 
-  note(
-    `${renderMeasurement(measurement)}\n\n${renderMachine(measurement)}`,
-    "Your baseline",
-  );
+${brand.bold("2. Clean build")} ${brand.dim("— wipe the products, keep the resolved packages")}
 
-  const touchCore = metrics.touchCore;
-  const incremental = metrics.incremental;
-  if (touchCore && incremental) {
-    const ratio = touchCore.mean / Math.max(incremental.mean, 0.001);
-    p.log.info(
-      `Changing one line in ${brand.accent("Core")}'s design system costs ` +
-        `${brand.bold(`${ratio.toFixed(0)}×`)} a no-op build.\n` +
-        `${brand.dim("Read that as a fact about your graph, not a bug to fix: ~110 files genuinely")}\n` +
-        `${brand.dim("depend on Theme, so they genuinely rebuild. Splitting Core would not save you")}\n` +
-        `${brand.dim("a second here. It's the price of a shared design system — worth paying, worth")}\n` +
-        `${brand.dim("knowing.")}`,
-    );
-  }
+${cleanBuild(labels.baselineClean)}
 
-  const cleanBuild = metrics.cleanBuild;
-  if (cleanBuild) {
-    p.log.info(
-      `${brand.bold("The number to watch is the clean build: ")}` +
-        `${brand.bold(formatDuration(cleanBuild.mean))}.\n` +
-        `${brand.dim("Your team pays it on every CI run. Next task, we make it smaller.")}`,
-    );
-  }
+${brand.bold("3. No-op build")} ${brand.dim("— warm up first, so every timed run is a real no-op")}
 
-  p.log.success(
-    `Saved to ${brand.dim(".workshop/measurements/baseline.json")} — every later task is compared against it.`,
-  );
-};
+${incrementalBuild(labels.baselineIncremental)}
+
+${brand.dim("Together, a couple of minutes. That wait is not lost time — it's the wait your")}
+${brand.dim("team pays all day, and it's why any of this is worth doing.")}
+
+${brand.dim("Then pick \"Validate my work\".")}`;
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
@@ -174,39 +92,78 @@ const validate = async (): Promise<ValidationResult> => {
     detail: hyperfineInstalled ? undefined : "Run `mise install` in the repo root.",
   });
 
-  const baseline = await loadMeasurement("baseline");
+  const clean = await readMeasurement(labels.baselineClean);
   checks.push({
-    label: "A baseline measurement exists",
-    ok: baseline !== null,
-    detail: baseline ? undefined : 'Choose "Measure the baseline" in this task.',
+    label: "Clean build measured",
+    ok: clean !== null,
+    detail: clean
+      ? undefined
+      : `Nothing readable at .workshop/measurements/${labels.baselineClean}.json yet.`,
   });
 
-  if (baseline) {
-    const missing = REQUIRED_METRICS.filter((key) => !baseline.metrics[key]);
-    checks.push({
-      label: "All four metrics were recorded",
-      ok: missing.length === 0,
-      detail:
-        missing.length === 0
-          ? undefined
-          : `Missing: ${missing.map((key) => metricTitles[key]).join(", ")}. Re-run the measurement.`,
-    });
+  const incremental = await readMeasurement(labels.baselineIncremental);
+  checks.push({
+    label: "No-op build measured",
+    ok: incremental !== null,
+    detail: incremental
+      ? undefined
+      : `Nothing readable at .workshop/measurements/${labels.baselineIncremental}.json yet.`,
+  });
 
-    // A baseline someone else recorded on another machine is worse than none —
-    // it would make every later comparison a lie.
-    const sameMachine = baseline.machine.cores === (await import("node:os")).cpus().length;
+  // Catch the ways this comes out wrong. A wrong baseline is worse than no
+  // baseline: everything else today is measured against it, so a number that
+  // looks plausible and isn't will quietly poison the whole day.
+  if (clean) {
+    // Seen for real: run 1 resolved the packages, run 2 didn't. 47s ± 25s, when
+    // the honest number was 29s.
+    const noisy = clean.runs > 1 && clean.stddev > clean.mean * 0.3;
     checks.push({
-      label: "The baseline was measured on this machine",
-      ok: sameMachine,
-      detail: sameMachine
-        ? undefined
-        : "This baseline looks like it came from a different machine. Re-measure so comparisons mean something.",
+      label: "The clean build measurement is steady",
+      ok: !noisy,
+      detail: noisy
+        ? `σ of ${formatDuration(clean.stddev)} on a ${formatDuration(clean.mean)} mean — the runs ` +
+          `disagree far too much to compare anything against. The usual cause: the packages ` +
+          `weren't resolved yet, so run 1 cloned Alamofire and Kingfisher and the rest didn't. ` +
+          `Resolve first (see the hint), then measure again.`
+        : undefined,
     });
   }
 
+  if (clean && incremental) {
+    const looksLikeACleanBuild = clean.mean > incremental.mean;
+    checks.push({
+      label: "The clean build costs more than the no-op",
+      ok: looksLikeACleanBuild,
+      detail: looksLikeACleanBuild
+        ? undefined
+        : "Suspicious — a clean build should cost more than doing nothing. Did --prepare " +
+          "actually remove the build products?",
+    });
+
+    const steady = incremental.runs < 2 || incremental.stddev < incremental.mean;
+    checks.push({
+      label: "The no-op measurement is steady",
+      ok: steady,
+      detail: steady
+        ? undefined
+        : `σ of ${formatDuration(incremental.stddev)} on a ${formatDuration(incremental.mean)} mean ` +
+          "means the runs disagree wildly. The usual cause is a missing --warmup: run 1 rebuilt " +
+          "something, the rest didn't.",
+    });
+  }
+
+  const report =
+    clean || incremental
+      ? renderTable([
+          { label: "Clean build", stat: clean },
+          { label: "No-op build", stat: incremental },
+        ])
+      : undefined;
+
   return {
     checks,
-    hint: 'Run "Measure the baseline" from this task, then validate again.',
+    ...(report ? { report } : {}),
+    hint: "Take the hint below for a nudge, or the commands if you'd rather move on.",
   };
 };
 
@@ -217,26 +174,33 @@ export const task01: WorkshopTask = {
   title: "Measure the baseline",
   summary: "Get reproducible numbers before you change anything.",
   brief,
-  actions: [
+  reveals: [
     {
-      id: "measure",
-      label: "Measure the baseline",
-      hint: "Runs hyperfine across the four metrics",
-      run: measureBaseline,
+      id: "hint",
+      label: "Give me a hint",
+      hint: "Which flags, and why the two differ",
+      title: "Hint",
+      body: hint,
+    },
+    {
+      id: "commands",
+      label: "Show me the commands",
+      hint: "The full answer, copy-pasteable",
+      title: "The commands",
+      body: commands,
     },
   ],
   validate,
   solutionBranch: "solutions/01",
-  // This task is deliberately the one you can't skip by checking out a branch.
   stuckNote:
     `There's no branch to check out for this one, and that's on purpose.\n\n` +
-    `A baseline is a measurement of ${brand.bold("your")} machine. A number committed to git\n` +
-    `would be someone else's laptop, on some other day, and every comparison you\n` +
-    `made against it for the rest of the day would be fiction.\n\n` +
-    `${brand.bold("If the measurement won't run:")}\n\n` +
-    `  ${brand.dim("hyperfine not found")}      → ${brand.accent("mise install")}\n` +
-    `  ${brand.dim("xcodebuild fails")}         → open ${brand.accent("app/RockyFeed.xcodeproj")} and build once by hand;\n` +
-    `                           Xcode will tell you what's wrong far better than we can\n` +
-    `  ${brand.dim("no iOS simulator")}         → install an iOS runtime in Xcode › Settings › Components\n\n` +
-    `${brand.dim("Ask. This is the one step everything else is measured against.")}`,
+    `A baseline measures ${brand.bold("your")} machine. A number committed to git would be\n` +
+    `someone else's laptop on some other day, and every comparison you made against\n` +
+    `it for the rest of today would be fiction.\n\n` +
+    `${brand.bold("If it won't run:")}\n\n` +
+    `  ${brand.dim("hyperfine not found")}   → ${brand.accent("mise install")}\n` +
+    `  ${brand.dim("xcodebuild fails")}      → open ${brand.accent("app/RockyFeed.xcodeproj")} and build once by hand;\n` +
+    `                        Xcode explains itself better than we can\n` +
+    `  ${brand.dim("no iOS simulator")}      → Xcode › Settings › Components\n\n` +
+    `${brand.dim("Ask. Everything today is measured against this one step.")}`,
 };

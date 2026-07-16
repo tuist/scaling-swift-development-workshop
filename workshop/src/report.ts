@@ -1,7 +1,10 @@
 import { brand, formatDuration, symbols } from "./theme.js";
-import { metricTitles, type Measurement, type MetricKey, type Stat } from "./measure.js";
+import type { Stat } from "./measure.js";
 
-const METRIC_ORDER: MetricKey[] = ["resolve", "cleanBuild", "incremental", "touchCore"];
+export interface Row {
+  label: string;
+  stat: Stat | null;
+}
 
 const pad = (text: string, width: number): string =>
   text.length >= width ? text : text + " ".repeat(width - text.length);
@@ -9,64 +12,56 @@ const pad = (text: string, width: number): string =>
 const padStart = (text: string, width: number): string =>
   text.length >= width ? text : " ".repeat(width - text.length) + text;
 
-const formatStat = (stat: Stat): string =>
-  `${formatDuration(stat.mean)} ${brand.dim(`± ${formatDuration(stat.stddev)}`)}`;
+const formatStat = (stat: Stat | null): string => {
+  if (!stat) return brand.dim("not measured");
+  const spread = stat.runs > 1 ? ` ${brand.dim(`± ${formatDuration(stat.stddev)}`)}` : "";
+  return `${formatDuration(stat.mean)}${spread}`;
+};
 
-/** Renders a measurement as a small table. */
-export const renderMeasurement = (measurement: Measurement): string => {
-  const rows = METRIC_ORDER.filter((key) => measurement.metrics[key]);
-  const labelWidth = Math.max(...rows.map((key) => metricTitles[key].length));
-
-  const lines = rows.map((key) => {
-    const stat = measurement.metrics[key];
-    if (!stat) return "";
-    return `${pad(metricTitles[key], labelWidth)}  ${formatStat(stat)}`;
-  });
-
-  return lines.join("\n");
+/** A small table of someone's own numbers. */
+export const renderTable = (rows: Row[]): string => {
+  const width = Math.max(...rows.map((row) => row.label.length));
+  return rows.map((row) => `${pad(row.label, width)}  ${formatStat(row.stat)}`).join("\n");
 };
 
 /**
- * Renders a measurement against the baseline, so an improvement (or a
- * regression) is impossible to miss.
+ * Before against after, with a verdict.
+ *
+ * The verdict refuses to call anything a win unless it clears the combined noise
+ * of both runs — the whole reason we made them measure with a spread.
  */
-export const renderComparison = (baseline: Measurement, current: Measurement): string => {
-  const rows = METRIC_ORDER.filter((key) => baseline.metrics[key] && current.metrics[key]);
-  const labelWidth = Math.max(...rows.map((key) => metricTitles[key].length));
+export const renderComparison = (
+  rows: Array<{ label: string; before: Stat | null; after: Stat | null }>,
+): string => {
+  const width = Math.max(...rows.map((row) => row.label.length));
 
-  const lines = rows.map((key) => {
-    const before = baseline.metrics[key];
-    const after = current.metrics[key];
-    if (!before || !after) return "";
+  return rows
+    .map((row) => {
+      const { before, after } = row;
+      if (!before || !after) {
+        return `${pad(row.label, width)}  ${brand.dim("not measured")}`;
+      }
 
-    const delta = (after.mean - before.mean) / before.mean;
-    const percent = `${Math.abs(delta * 100).toFixed(0)}%`;
+      const delta = (after.mean - before.mean) / before.mean;
+      const percent = `${Math.abs(delta * 100).toFixed(0)}%`;
+      const noise = (before.stddev + after.stddev) / before.mean;
 
-    // Only call it a change if it clears the combined noise of both runs.
-    const noise = (before.stddev + after.stddev) / before.mean;
-    let verdict: string;
-    if (Math.abs(delta) <= Math.max(noise, 0.02)) {
-      verdict = brand.dim("~ noise");
-    } else if (delta < 0) {
-      verdict = brand.success(`${symbols.faster} ${percent} faster`);
-    } else {
-      verdict = brand.error(`${symbols.slower} ${percent} slower`);
-    }
+      let verdict: string;
+      if (Math.abs(delta) <= Math.max(noise, 0.02)) {
+        verdict = brand.dim("~ noise");
+      } else if (delta < 0) {
+        verdict = brand.success(`${symbols.faster} ${percent} faster`);
+      } else {
+        verdict = brand.error(`${symbols.slower} ${percent} slower`);
+      }
 
-    return [
-      pad(metricTitles[key], labelWidth),
-      padStart(formatDuration(before.mean), 8),
-      brand.dim("→"),
-      padStart(formatDuration(after.mean), 8),
-      verdict,
-    ].join("  ");
-  });
-
-  return lines.join("\n");
+      return [
+        pad(row.label, width),
+        padStart(formatDuration(before.mean), 8),
+        brand.dim("→"),
+        padStart(formatDuration(after.mean), 8),
+        verdict,
+      ].join("  ");
+    })
+    .join("\n");
 };
-
-export const renderMachine = (measurement: Measurement): string =>
-  brand.dim(
-    `${measurement.machine.model} · ${measurement.machine.cores} cores · ` +
-      `${measurement.machine.memoryGB} GB · ${measurement.machine.xcode}`,
-  );

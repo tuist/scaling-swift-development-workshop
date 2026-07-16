@@ -1,12 +1,17 @@
+import fs from "node:fs/promises";
 import * as p from "@clack/prompts";
 import { findTask, nextTask, tasks } from "./tasks/index.js";
 import { allPassed, type WorkshopTask } from "./tasks/types.js";
 import { loadState, markCompleted, markVisited } from "./state.js";
+import { paths } from "./paths.js";
 import { brand, symbols } from "./theme.js";
 import { note } from "./ui.js";
 
 const statusMarker = (task: WorkshopTask, completed: number[]): string =>
   completed.includes(task.id) ? symbols.pass : symbols.pending;
+
+const briefTitle = (task: WorkshopTask): string =>
+  `${task.stage} · Task ${task.id} — ${task.title}`;
 
 const chooseTask = async (): Promise<WorkshopTask | null> => {
   const state = await loadState();
@@ -48,6 +53,10 @@ const runValidation = async (task: WorkshopTask): Promise<void> => {
   });
   note(lines.join("\n"), passed ? "Passed" : "Not yet");
 
+  // Their numbers, whether or not everything passed — a partial result is still
+  // worth seeing.
+  if (result.report) note(result.report, "Your numbers");
+
   if (passed) {
     await markCompleted(task.id);
     p.log.success(`Task ${task.id} complete.`);
@@ -64,33 +73,34 @@ const runValidation = async (task: WorkshopTask): Promise<void> => {
 
 const showTask = async (task: WorkshopTask): Promise<void> => {
   await markVisited(task.id);
-  note(task.brief, `${task.stage} · Task ${task.id} — ${task.title}`);
+  note(task.brief, briefTitle(task));
 
   for (;;) {
-    // Keep every option the same shape — clack infers the value type from the
-    // options array, and a mixed shape collapses it to `unknown`.
+    // Same shape for every option — clack infers the value type from the array,
+    // and a mixed shape collapses it to `unknown`.
     const options = [
-      ...(task.actions ?? []).map((action) => ({
-        value: `action:${action.id}`,
-        label: action.label,
-        hint: action.hint ?? "Run this step",
+      { value: "validate", label: "Validate my work", hint: "Check whether you've done it" },
+      ...(task.reveals ?? []).map((reveal) => ({
+        value: `reveal:${reveal.id}`,
+        label: reveal.label,
+        hint: reveal.hint ?? "Show more",
       })),
-      { value: "validate", label: "Validate my work", hint: "Check whether the task is done" },
       { value: "brief", label: "Show the brief again", hint: "Re-read the task" },
       { value: "stuck", label: "I'm stuck", hint: `Jump to ${task.solutionBranch}` },
       { value: "back", label: "Back to the task list", hint: "Pick another task" },
     ];
 
-    // Preselect the task's primary action. This also gives clack the inference
-    // site it needs for the option value type.
-    const firstAction = (task.actions ?? [])[0];
-    const initialValue = firstAction ? `action:${firstAction.id}` : "validate";
-
-    const choice = await p.select({ message: `Task ${task.id}`, options, initialValue });
+    // Default to validating. The reveals are there when they're wanted, not
+    // before — you don't learn anything from a command handed to you.
+    const choice = await p.select({
+      message: `Task ${task.id}`,
+      options,
+      initialValue: "validate",
+    });
     if (p.isCancel(choice) || choice === "back") return;
 
     if (choice === "brief") {
-      note(task.brief, `${task.stage} · Task ${task.id} — ${task.title}`);
+      note(task.brief, briefTitle(task));
       continue;
     }
 
@@ -111,9 +121,11 @@ const showTask = async (task: WorkshopTask): Promise<void> => {
       continue;
     }
 
-    const actionId = choice.replace("action:", "");
-    const action = (task.actions ?? []).find((candidate) => candidate.id === actionId);
-    if (action) await action.run();
+    const reveal = (task.reveals ?? []).find((candidate) => `reveal:${candidate.id}` === choice);
+    if (reveal) {
+      const body = reveal.resolve ? await reveal.resolve() : reveal.body;
+      note(body, reveal.title);
+    }
   }
 };
 
@@ -121,16 +133,19 @@ const main = async (): Promise<void> => {
   console.clear();
   p.intro(`${brand.accent("◆")} ${brand.bold("Scaling Swift Development")} ${brand.dim("· workshop")}`);
 
+  // hyperfine's --export-json won't create a missing directory: it runs the whole
+  // benchmark and *then* fails to write. Nobody should lose two minutes to that.
+  await fs.mkdir(paths.measurementsDir, { recursive: true });
+
   const state = await loadState();
   if (state.completed.length === 0) {
     p.log.info(
-      `We start from ${brand.accent("RockyFeed")}: a small app that is slow for all the usual reasons.\n` +
-        `${brand.dim("Your job is to make it fast — and to prove that you did.")}`,
+      `We start from ${brand.accent("RockyFeed")}: a small app that's slow for all the usual reasons.\n` +
+        `${brand.dim("You'll make it fast, and prove that you did. The runner explains each task")}\n` +
+        `${brand.dim("and checks your work — you run the commands.")}`,
     );
   } else {
-    p.log.info(
-      `${brand.bold(`${state.completed.length}/${tasks.length}`)} tasks done so far.`,
-    );
+    p.log.info(`${brand.bold(`${state.completed.length}/${tasks.length}`)} tasks done so far.`);
   }
 
   for (;;) {
@@ -139,7 +154,9 @@ const main = async (): Promise<void> => {
     await showTask(task);
   }
 
-  p.outro(`${brand.dim("Run")} ${brand.accent("mise run workshop")} ${brand.dim("any time to pick up where you left off.")}`);
+  p.outro(
+    `${brand.dim("Run")} ${brand.accent("mise run workshop")} ${brand.dim("any time to pick up where you left off.")}`,
+  );
 };
 
 main().catch((error: unknown) => {

@@ -1,23 +1,10 @@
-import * as p from "@clack/prompts";
-import {
-  benchmark,
-  buildSetting,
-  compilationCacheBytes,
-  loadMeasurement,
-  metricBlurbs,
-  metricRoughSeconds,
-  metricTitles,
-  saveMeasurement,
-  type MetricKey,
-  type Stat,
-} from "../measure.js";
-import { renderComparison, renderMeasurement } from "../report.js";
+import { buildEnv, cleanBuild, coldCacheBuild, labels } from "../commands.js";
+import { buildSetting, compilationCacheBytes, readMeasurement } from "../measure.js";
+import { renderComparison } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
-import { note } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
 
 const SETTING = "COMPILATION_CACHE_ENABLE_CACHING";
-const MEASURED_METRICS: MetricKey[] = ["resolve", "cleanBuild", "incremental", "touchCore"];
 
 const formatBytes = (bytes: number): string => {
   if (bytes <= 0) return "nothing yet";
@@ -27,154 +14,70 @@ const formatBytes = (bytes: number): string => {
 
 const brief = `${brand.bold("Same inputs, same output. Fetch it instead of building it.")}
 
-Your clean build compiles every file in RockyFeed from scratch, every time —
-including Alamofire and Kingfisher, which have not changed since the day you added
-them. Nothing about that work is new. It's just unremembered.
+Your clean build compiles every file from scratch, every time — including
+Alamofire and Kingfisher, which haven't changed since the day you added them.
+None of that work is new. It's just unremembered.
 
-Xcode 26 can remember it. Compilation caching hashes the inputs to each compile
-job and stores the result in a content-addressed store (a ${brand.dim("CAS")}). Same inputs →
-fetch the object instead of compiling it.
+Xcode 26 can remember it. It hashes the inputs of each compile job and stores the
+result in a content-addressed store, so the same inputs fetch an object instead of
+compiling one. It's off by default.
 
-${brand.bold("Why this lever, first")}
-There's a coarser kind of cache that works on whole modules — Bazel, Tuist. It's
-powerful, but it only pays off when your dependency graph is a good shape, and
-RockyFeed's very much isn't yet. Xcode's cache works one compile job at a time, so
-it doesn't care how badly modularised you are. Which today, you are.
+${brand.bold("Why this lever first")}
+There's a coarser cache that works on whole modules — Bazel, Tuist. Powerful, but
+it only pays off when your dependency graph is a good shape, and RockyFeed's isn't
+yet. Xcode's cache works one compile job at a time, so it doesn't care how badly
+modularised you are. Which, today, you are.
 
-${brand.bold("Do this")}
+${brand.bold("Your job")}
 
-  1. Open ${brand.accent("app/RockyFeed.xcodeproj")} in Xcode
-  2. Select the ${brand.accent("RockyFeed")} ${brand.dim("project")} (the blue icon, not the target)
-  3. ${brand.accent("Build Settings")} → search for ${brand.accent("compilation cache")}
-  4. Set ${brand.accent("Enable Compilation Caching")} to ${brand.accent("Yes")}
+  1. Find the setting in Xcode and turn it on
+  2. Re-measure the clean build → ${brand.accent(labels.cachedClean)}${brand.dim(".json")}
+  3. Then measure it with the cache thrown away → ${brand.accent(labels.coldCacheClean)}${brand.dim(".json")}
 
-Setting it on the ${brand.bold("project")} matters: that's what makes it reach the package
-targets too, and the packages are most of your build.
+${brand.bold("Step 3 is not optional, and it is the point.")}
+A cache is not free money. Before you tell your team to turn this on, you should
+be able to say what it costs as well as what it saves — and there's exactly one
+way to know.
 
-${brand.bold("Then measure — and don't skip this")}
-This cache is not free money, and the measurement is the only way you'd know:
+${brand.dim("Go and look in Xcode's build settings first. Search is your friend and the")}
+${brand.dim("setting isn't hiding. Hint below if you want it.")}`;
 
-  ${brand.success("Warm cache")}   the build you'll have all day. It gets much faster.
-  ${brand.error("Cold cache")}   the first build, or a fresh CI runner, or the morning after
-               an Xcode update. It gets ${brand.bold("slower")} — you're paying to fill a cache
-               you don't get to read yet.
-  ${brand.warn("Disk")}         hundreds of megabytes, and it grows.
+const hint = `${brand.bold("Finding it")}
+Open ${brand.accent("app/RockyFeed.xcodeproj")}, select the ${brand.accent("RockyFeed")} project — the blue icon at
+the top, ${brand.bold("not")} the target underneath — then ${brand.accent("Build Settings")} and search for
+${brand.accent("compilation cache")}.
 
-That trade is the whole reason we measured first. Take the numbers, then decide
-whether you'd ship this — which is a different question from whether it's faster.
+${brand.bold("Project, not target — this matters.")}
+Most of your clean build is Alamofire and Kingfisher, and those are package
+targets, not yours. Set it on the target and you've cached the small half of the
+build. Set it on the project and it reaches everything underneath.
 
-${brand.dim("Xcode writes the cache next to DerivedData by default. The workshop keeps its own")}
-${brand.dim("under .workshop/ so none of this touches the caches your day job depends on.")}`;
+${brand.bold("Measuring it")}
+Same ${brand.dim("$BUILD")} command as Task 1, same clean-build shape — only the export path
+changes, so you're comparing like with like.
 
-const measureAndCompare = async (): Promise<void> => {
-  const enabled = await buildSetting(SETTING);
-  if (enabled !== "YES") {
-    p.log.warn(
-      `${SETTING} is currently ${brand.bold(enabled ?? "unset")}. Measuring now would just ` +
-        `reproduce your baseline.\nTurn it on in Xcode first — the brief has the four steps.`,
-    );
-    return;
-  }
+${brand.bold("For the cold number")}, you need a run where the cache is empty ${brand.bold("and")} the products
+are gone. The workshop keeps its cache at ${brand.accent(".workshop/CompilationCache.noindex")}
+instead of your global Xcode caches, precisely so you can throw it away without
+consequences.
 
-  const baseline = await loadMeasurement("baseline");
-  if (!baseline) {
-    p.log.error("No baseline to compare against. Go back and finish Task 1 first.");
-    return;
-  }
+${brand.dim("Watch what the first cached build does. It won't be what you expect, and that")}
+${brand.dim("surprise is the lesson.")}`;
 
-  const total = MEASURED_METRICS.reduce((sum, key) => sum + metricRoughSeconds[key] * 2, 0);
-  p.log.info(
-    `Re-running the same benchmarks, 2 runs each (~${formatDuration(total)}).\n` +
-      `${brand.dim("The first clean build will be slow — that's the cache filling up. That cost is")}\n` +
-      `${brand.dim("real, and we measure it separately in a moment.")}`,
-  );
+const commands = `${brand.bold("If $BUILD isn't set in this shell any more:")}
 
-  const metrics: Partial<Record<MetricKey, Stat>> = {};
-  for (const key of MEASURED_METRICS) {
-    const spinner = p.spinner();
-    spinner.start(`${metricTitles[key]} — ${brand.dim(metricBlurbs[key])}`);
-    try {
-      const stat = await benchmark(key, 2);
-      metrics[key] = stat;
-      spinner.stop(`${metricTitles[key]}  ${brand.bold(formatDuration(stat.mean))}`);
-    } catch (error) {
-      spinner.stop(`${metricTitles[key]} — failed`, 1);
-      p.log.error(error instanceof Error ? error.message : String(error));
-      return;
-    }
-  }
+${buildEnv}
 
-  const current = await saveMeasurement("task-02", metrics);
-  note(renderComparison(baseline, current), "Baseline → with the cache on");
+${brand.bold("1. Clean build, cache warm")} ${brand.dim("— run this twice. The first fills the cache,")}
+${brand.dim("the second reads it. Only the second is the number you want.")}
 
-  const before = baseline.metrics.cleanBuild;
-  const after = metrics.cleanBuild;
-  if (before && after) {
-    const saved = before.mean - after.mean;
-    if (saved > 0) {
-      p.log.success(
-        `Clean build is ${brand.bold(formatDuration(saved))} faster — ` +
-          `${brand.bold(`${(before.mean / after.mean).toFixed(1)}×`)}. ` +
-          `Every CI run, every clean, from one build setting.`,
-      );
-    } else {
-      p.log.warn(
-        `The clean build didn't get faster. If this was your first run after enabling\n` +
-          `the cache, it was still filling up — measure once more.`,
-      );
-    }
-  }
+${cleanBuild(labels.cachedClean)}
 
-  const size = await compilationCacheBytes();
-  p.log.info(`The cache is costing you ${brand.bold(formatBytes(size))} on disk.`);
-};
+${brand.bold("2. Clean build, cache cold")} ${brand.dim("— products and cache both gone")}
 
-const measureColdCache = async (): Promise<void> => {
-  const enabled = await buildSetting(SETTING);
-  if (enabled !== "YES") {
-    p.log.warn(`${SETTING} isn't on yet, so there's no cache to throw away.`);
-    return;
-  }
+${coldCacheBuild(labels.coldCacheClean)}
 
-  const baseline = await loadMeasurement("baseline");
-  const warm = await loadMeasurement("task-02");
-
-  p.log.info(
-    `Throwing the cache away and building clean — a fresh CI runner, or the first\n` +
-      `build after an Xcode update. ${brand.dim(`One run, ~${formatDuration(metricRoughSeconds.coldCacheCleanBuild)}.`)}`,
-  );
-
-  const spinner = p.spinner();
-  spinner.start(`${metricTitles.coldCacheCleanBuild} — ${brand.dim(metricBlurbs.coldCacheCleanBuild)}`);
-  let cold: Stat;
-  try {
-    cold = await benchmark("coldCacheCleanBuild", 1);
-    spinner.stop(`${metricTitles.coldCacheCleanBuild}  ${brand.bold(formatDuration(cold.mean))}`);
-  } catch (error) {
-    spinner.stop("Cold-cache build failed", 1);
-    p.log.error(error instanceof Error ? error.message : String(error));
-    return;
-  }
-
-  await saveMeasurement("task-02-cold", { coldCacheCleanBuild: cold });
-
-  const rows = [
-    `${"Clean build, no cache at all".padEnd(32)} ${formatDuration(baseline?.metrics.cleanBuild?.mean ?? NaN)}`,
-    `${"Clean build, cache cold".padEnd(32)} ${brand.error(formatDuration(cold.mean))}   ${brand.dim("← filling it")}`,
-    `${"Clean build, cache warm".padEnd(32)} ${brand.success(formatDuration(warm?.metrics.cleanBuild?.mean ?? NaN))}   ${brand.dim("← reading it")}`,
-  ];
-  note(rows.join("\n"), "What the cache actually costs");
-
-  const noCache = baseline?.metrics.cleanBuild?.mean;
-  if (noCache && cold.mean > noCache) {
-    p.log.warn(
-      `A cold cache is ${brand.bold(formatDuration(cold.mean - noCache))} ${brand.bold("slower")} than no cache at all.\n` +
-        `${brand.dim("This is the p99 in the talk, and it's why 'we added a cache' is not the same")}\n` +
-        `${brand.dim("claim as 'we got faster'. If your CI never restores the cache, you have made")}\n` +
-        `${brand.dim("every run worse. Cache hit rate is the thing to watch, not cache existence.")}`,
-    );
-  }
-};
+${brand.dim("Then \"Validate my work\".")}`;
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
@@ -186,35 +89,93 @@ const validate = async (): Promise<ValidationResult> => {
     detail:
       enabled === "YES"
         ? undefined
-        : `It's currently ${enabled ?? "unset"}. Set "Enable Compilation Caching" to Yes on the ` +
-          `RockyFeed project (not the target) in Xcode's Build Settings.`,
+        : `It's currently ${enabled ?? "unset"}. Turn on "Enable Compilation Caching" on the ` +
+          `RockyFeed project — the blue icon, not the target.`,
   });
 
-  const measurement = await loadMeasurement("task-02");
+  const baseline = await readMeasurement(labels.baselineClean);
+  const cached = await readMeasurement(labels.cachedClean);
+  const cold = await readMeasurement(labels.coldCacheClean);
+
   checks.push({
-    label: "You measured the result",
-    ok: measurement !== null,
-    detail: measurement ? undefined : 'Run "Measure & compare" — turning it on without measuring is how you end up shipping a regression.',
+    label: "Clean build re-measured with the cache on",
+    ok: cached !== null,
+    detail: cached
+      ? undefined
+      : `Nothing readable at .workshop/measurements/${labels.cachedClean}.json yet.`,
   });
 
-  const baseline = await loadMeasurement("baseline");
-  if (baseline && measurement) {
-    const before = baseline.metrics.cleanBuild?.mean;
-    const after = measurement.metrics.cleanBuild?.mean;
-    const faster = before !== undefined && after !== undefined && after < before;
+  checks.push({
+    label: "Cold-cache clean build measured",
+    ok: cold !== null,
+    detail: cold
+      ? undefined
+      : `Nothing readable at .workshop/measurements/${labels.coldCacheClean}.json yet. ` +
+        `That's the number telling you what the cache costs — don't skip it.`,
+  });
+
+  if (baseline && cached) {
+    const faster = cached.mean < baseline.mean;
     checks.push({
-      label: "The clean build actually got faster",
+      label: "The cached clean build beats the baseline",
       ok: faster,
       detail: faster
         ? undefined
-        : "Measure again — the run that fills the cache is slower than no cache at all, so a first measurement can look like a regression.",
+        : "Not yet. If that was the run which filled the cache, it was writing rather than " +
+          "reading — measure once more and it should drop.",
     });
   }
 
+  const report =
+    baseline && cached
+      ? renderComparison([{ label: "Clean build", before: baseline, after: cached }])
+      : undefined;
+
   return {
     checks,
-    hint: "Enable the setting in Xcode, then run \"Measure & compare\".",
+    ...(report ? { report } : {}),
+    hint: "Turn the setting on in Xcode, then measure both numbers.",
   };
+};
+
+/** Reads back their three numbers. Still only reading — never measuring. */
+const verdict = async (): Promise<string> => {
+  const baseline = await readMeasurement(labels.baselineClean);
+  const cached = await readMeasurement(labels.cachedClean);
+  const cold = await readMeasurement(labels.coldCacheClean);
+  const size = await compilationCacheBytes();
+
+  if (!baseline || !cached || !cold) {
+    return (
+      `${brand.bold("Measure all three first.")}\n\n` +
+      `This only means something with the baseline from Task 1, the warm number and\n` +
+      `the cold number side by side. Getting all three is the task.`
+    );
+  }
+
+  const lines = [
+    `${"No cache at all".padEnd(24)} ${formatDuration(baseline.mean)}`,
+    `${"Cache cold".padEnd(24)} ${brand.error(formatDuration(cold.mean))}   ${brand.dim("← filling it")}`,
+    `${"Cache warm".padEnd(24)} ${brand.success(formatDuration(cached.mean))}   ${brand.dim("← reading it")}`,
+    ``,
+    `${"On disk".padEnd(24)} ${formatBytes(size)}`,
+  ];
+
+  const speedup = (baseline.mean / cached.mean).toFixed(1);
+  let reading = `Warm, you're ${brand.bold(`${speedup}×`)} faster, from one build setting.`;
+
+  if (cold.mean > baseline.mean) {
+    reading +=
+      `\n\nCold, you're ${brand.bold(formatDuration(cold.mean - baseline.mean))} ${brand.bold("slower")} than having no cache at all.\n\n` +
+      `${brand.bold("Both are true at once, and that's the finding.")}\n` +
+      `"We added a cache" and "we got faster" are different claims. A CI job that\n` +
+      `never restores the cache has been made worse by this change, on every run.\n` +
+      `Watch the hit rate, not whether a cache exists.\n\n` +
+      `${brand.dim("This is the p99 bar in the talk, and the slide about optimizations that")}\n` +
+      `${brand.dim("backfire — except now it's your number, off your machine.")}`;
+  }
+
+  return `${lines.join("\n")}\n\n${reading}`;
 };
 
 export const task02: WorkshopTask = {
@@ -224,18 +185,28 @@ export const task02: WorkshopTask = {
   title: "Reuse, don't recompute",
   summary: "Turn on Xcode's compilation cache, then find out what it really cost.",
   brief,
-  actions: [
+  reveals: [
     {
-      id: "compare",
-      label: "Measure & compare",
-      hint: "Re-runs the benchmarks against your baseline",
-      run: measureAndCompare,
+      id: "hint",
+      label: "Give me a hint",
+      hint: "Where it lives, and why it matters where you set it",
+      title: "Hint",
+      body: hint,
     },
     {
-      id: "cold",
-      label: "What does a cold cache cost?",
-      hint: "The number that stops this looking like free money",
-      run: measureColdCache,
+      id: "commands",
+      label: "Show me the commands",
+      hint: "The full answer, copy-pasteable",
+      title: "The commands",
+      body: commands,
+    },
+    {
+      id: "verdict",
+      label: "So what did it cost?",
+      hint: "Read your three numbers together",
+      title: "What the cache actually costs",
+      body: "",
+      resolve: verdict,
     },
   ],
   validate,
