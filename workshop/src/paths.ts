@@ -18,6 +18,15 @@ export const paths = {
   measurementsDir: path.join(repoRoot, ".workshop", "measurements"),
   /** DerivedData we own, so benchmarks can clean it without nuking the user's. */
   derivedData: path.join(repoRoot, ".workshop", "DerivedData"),
+  /**
+   * The compilation cache (CAS) we own.
+   *
+   * Xcode defaults this to a *global* location under ~/Library/Developer/Xcode.
+   * We point it inside .workshop/ instead, so the workshop never writes hundreds
+   * of megabytes into the caches your day job depends on — and so we can wipe it
+   * to demonstrate a cold cache without consequences.
+   */
+  compilationCache: path.join(repoRoot, ".workshop", "CompilationCache.noindex"),
 } as const;
 
 export const scheme = "RockyFeed";

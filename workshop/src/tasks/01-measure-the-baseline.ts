@@ -26,11 +26,12 @@ every later change we make is judged against the numbers you take right now.
 
 ${brand.bold("We measure four things")}, because "the build is slow" is never one problem:
 
+  ${brand.accent("Clean build")}        ${brand.bold("The one we chase.")} What CI pays on every run, and what
+                      you pay after every clean. Most of today aims here.
   ${brand.accent("Resolve packages")}   SwiftPM git-clones every dependency, with full history.
-  ${brand.accent("Clean build")}        What CI pays every run, and you pay after every clean.
   ${brand.accent("Incremental build")}  Changed nothing, built again. Should be free. Watch.
-  ${brand.accent("Change one line")}    A spacing constant in ${brand.accent("Core")}'s design system — the most
-  ${brand.accent("in Core")}            ordinary edit there is. This is the number that hurts.
+  ${brand.accent("One line in Core")}   A spacing constant in the design system. A diagnostic, not
+                      a target — see below.
 
 ${brand.bold("Why hyperfine?")}
 Because timing a build once tells you almost nothing. Machines are noisy: thermal
@@ -139,8 +140,21 @@ const measureBaseline = async (): Promise<void> => {
   if (touchCore && incremental) {
     const ratio = touchCore.mean / Math.max(incremental.mean, 0.001);
     p.log.info(
-      `Changing one line in ${brand.accent("Core")} costs ${brand.bold(`${ratio.toFixed(0)}×`)} ` +
-        `a no-op build. That gap is the god module, and it's what we go after next.`,
+      `Changing one line in ${brand.accent("Core")}'s design system costs ` +
+        `${brand.bold(`${ratio.toFixed(0)}×`)} a no-op build.\n` +
+        `${brand.dim("Read that as a fact about your graph, not a bug to fix: ~110 files genuinely")}\n` +
+        `${brand.dim("depend on Theme, so they genuinely rebuild. Splitting Core would not save you")}\n` +
+        `${brand.dim("a second here. It's the price of a shared design system — worth paying, worth")}\n` +
+        `${brand.dim("knowing.")}`,
+    );
+  }
+
+  const cleanBuild = metrics.cleanBuild;
+  if (cleanBuild) {
+    p.log.info(
+      `${brand.bold("The number to watch is the clean build: ")}` +
+        `${brand.bold(formatDuration(cleanBuild.mean))}.\n` +
+        `${brand.dim("Your team pays it on every CI run. Next task, we make it smaller.")}`,
     );
   }
 

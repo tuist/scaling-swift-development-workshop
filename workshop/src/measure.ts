@@ -13,7 +13,17 @@ export interface Stat {
   runs: number;
 }
 
-export type MetricKey = "resolve" | "cleanBuild" | "incremental" | "touchCore";
+export type MetricKey =
+  | "resolve"
+  | "cleanBuild"
+  | "incremental"
+  | "touchCore"
+  /**
+   * A clean build with the compilation cache empty. Not part of the standard
+   * set — it only means anything once caching is on, and it's the number that
+   * stops the cache from looking like free money.
+   */
+  | "coldCacheCleanBuild";
 
 export interface Measurement {
   label: string;
@@ -32,13 +42,15 @@ export const metricTitles: Record<MetricKey, string> = {
   cleanBuild: "Clean build",
   incremental: "Incremental build (no changes)",
   touchCore: "Rebuild after a one-line change in Core",
+  coldCacheCleanBuild: "Clean build, cache cold",
 };
 
 export const metricBlurbs: Record<MetricKey, string> = {
   resolve: "SwiftPM git-clones every dependency, with full history.",
   cleanBuild: "What CI pays on every run, and you pay after every clean.",
   incremental: "Should be ~free. Find out whether it is.",
-  touchCore: "The god-module tax: one line, and everything downstream rebuilds.",
+  touchCore: "How far a design-system change reaches.",
+  coldCacheCleanBuild: "The bill for filling the cache, not reading it.",
 };
 
 /** Rough wall-clock per run, used to warn people what they're in for. */
@@ -46,7 +58,8 @@ export const metricRoughSeconds: Record<MetricKey, number> = {
   resolve: 6,
   cleanBuild: 20,
   incremental: 2,
-  touchCore: 9,
+  touchCore: 19,
+  coldCacheCleanBuild: 42,
 };
 
 const xcodebuildArgs = [
@@ -60,6 +73,9 @@ const xcodebuildArgs = [
   "-derivedDataPath",
   paths.derivedData,
   "-quiet",
+  // Keep the compilation cache inside .workshop/ rather than Xcode's global
+  // location. Harmless while caching is off; essential once it's on.
+  `COMPILATION_CACHE_CAS_PATH=${paths.compilationCache}`,
 ];
 
 const shellQuote = (value: string): string => `'${value.replace(/'/g, `'\\''`)}'`;
@@ -154,10 +170,21 @@ const benchmarks = (): Record<MetricKey, Benchmark> => ({
     prepare: `rm -rf ${shellQuote(path.join(paths.derivedData, "SourcePackages"))}`,
     command: resolveCommand(),
   },
-  // Keep SourcePackages so we measure compilation, not resolution.
+  // Keep SourcePackages so we measure compilation, not resolution. The
+  // compilation cache lives outside Build/, so it survives — which is the point:
+  // this is the clean build you get with a cache you already have.
   cleanBuild: {
     key: "cleanBuild",
     prepare: `rm -rf ${shellQuote(path.join(paths.derivedData, "Build"))}`,
+    command: buildCommand(),
+  },
+  // The same clean build with the cache thrown away too: a fresh CI runner, or
+  // the morning after an Xcode update invalidated everything.
+  coldCacheCleanBuild: {
+    key: "coldCacheCleanBuild",
+    prepare:
+      `rm -rf ${shellQuote(path.join(paths.derivedData, "Build"))} ` +
+      shellQuote(paths.compilationCache),
     command: buildCommand(),
   },
   // The only benchmark that needs a warmup. It has no `prepare`, so if the build
@@ -268,6 +295,36 @@ export const saveMeasurement = async (
     "utf8",
   );
   return measurement;
+};
+
+/**
+ * Reads a resolved build setting from the project.
+ *
+ * We ask xcodebuild rather than grepping the pbxproj, because the resolved value
+ * is what actually governs the build — and because it's true regardless of
+ * whether the setting was set in Xcode, an xcconfig, or by hand.
+ */
+export const buildSetting = async (name: string): Promise<string | null> => {
+  const result = await run("xcodebuild", [
+    "-showBuildSettings",
+    "-project",
+    paths.xcodeproj,
+    "-scheme",
+    scheme,
+    "-destination",
+    destination,
+  ]);
+  if (!result.ok) return null;
+  const match = result.stdout.match(new RegExp(`^\\s*${name} = (.*)$`, "m"));
+  return match?.[1]?.trim() ?? null;
+};
+
+/** Size of the compilation cache on disk, in bytes. Caches aren't free. */
+export const compilationCacheBytes = async (): Promise<number> => {
+  const result = await run("du", ["-sk", paths.compilationCache]);
+  if (!result.ok) return 0;
+  const kb = Number.parseInt(result.stdout.trim().split(/\s+/)[0] ?? "0", 10);
+  return Number.isFinite(kb) ? kb * 1024 : 0;
 };
 
 export const loadMeasurement = async (label: string): Promise<Measurement | null> => {
