@@ -107,7 +107,7 @@ app/                     RockyFeed — the project you're here to fix
 └── Scripts/             the non-hermetic build phase
 
 workshop/                the workshop runner (Node + TypeScript)
-maintainer/              how the sample was authored — not part of the workshop
+maintainer/              notes for whoever runs the workshop — you can ignore this
 .workshop/               your progress + measurements (gitignored)
 ```
 

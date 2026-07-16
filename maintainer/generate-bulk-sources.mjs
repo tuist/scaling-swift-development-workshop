@@ -27,6 +27,11 @@
 //
 //   node maintainer/generate-bulk-sources.mjs
 //
+// ⚠️ This script writes .swift files but CANNOT add them to RockyFeed.xcodeproj —
+// the project is hand-maintained on purpose (see maintainer/README.md). Change any
+// of the name lists below and you must reflect it in Xcode by hand, or the new
+// files won't compile. Editing the bodies of existing files is safe.
+//
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
