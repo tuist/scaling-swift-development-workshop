@@ -1,13 +1,6 @@
 import Foundation
 
 // Ranking heuristics for the feed.
-//
-// ⚠️ These expressions are deliberately painful for the Swift type-checker: long
-// arithmetic chains mixing Int and Double literals with inline ternaries. Each one
-// is individually fine, but together they make this one file a measurable chunk of
-// every Core build.
-//
-// Build with `-Xfrontend -warn-long-function-bodies=100` and this file lights up.
 public enum RelevanceScoring {
     public static func score(for item: FeedItem, bookmarked: Bool, now: Date = Date()) -> Double {
         let ageHours = max(0, now.timeIntervalSince(item.talk.startsAt) / 3_600)
