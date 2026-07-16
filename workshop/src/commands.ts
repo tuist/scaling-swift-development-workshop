@@ -18,24 +18,44 @@ import { paths, scheme, destination } from "./paths.js";
 const rel = (absolute: string): string => path.relative(paths.repoRoot, absolute);
 
 const project = rel(paths.xcodeproj);
+const workspace = rel(paths.xcworkspace);
 const derivedData = rel(paths.derivedData);
 const cas = rel(paths.compilationCache);
 const measurements = rel(paths.measurementsDir);
 
 const exportPath = (label: string): string => `${measurements}/${label}.json`;
 
+const commonArgs = `-scheme ${scheme} \\
+  -destination '${destination}' \\
+  -derivedDataPath ${derivedData} \\
+  COMPILATION_CACHE_CAS_PATH=${cas} \\
+  -quiet`;
+
 /**
- * Set once, reused by every benchmark, so comparisons are apples to apples.
+ * The build command for tasks 1 and 2, before the project is generated.
  *
  * Run from the repo root — every path here is relative to it.
  */
 export const buildEnv = `export BUILD="xcodebuild build \\
   -project ${project} \\
-  -scheme ${scheme} \\
-  -destination '${destination}' \\
-  -derivedDataPath ${derivedData} \\
-  COMPILATION_CACHE_CAS_PATH=${cas} \\
-  -quiet"`;
+  ${commonArgs}"`;
+
+/**
+ * The build command from task 3 onwards.
+ *
+ * It has to change, and the reason is worth a minute of anyone's time: Tuist
+ * integrates Alamofire and Kingfisher as generated Xcode projects sitting beside
+ * yours in a *workspace*, rather than as a package graph Xcode resolves at build
+ * time. So the workspace — not the project — is the thing that knows the whole
+ * graph. Point xcodebuild at the project alone after generating and it fails with
+ * "unable to resolve module dependency: 'Kingfisher'", which is the build system
+ * telling you exactly that.
+ *
+ * Everything else is identical, so the numbers stay comparable with tasks 1 and 2.
+ */
+export const buildEnvGenerated = `export BUILD="xcodebuild build \\
+  -workspace ${workspace} \\
+  ${commonArgs}"`;
 
 /**
  * Resolve the packages once, before benchmarking anything.
@@ -98,6 +118,9 @@ export const labels = {
   baselineClean: "baseline-clean-build",
   baselineIncremental: "baseline-incremental",
   serialClean: "serial-clean-build",
+  generatedClean: "generated-clean-build",
+  splitClean: "split-clean-build",
+  splitSerial: "split-serial-build",
   cachedClean: "cached-clean-build",
   coldCacheClean: "cold-cache-clean-build",
 } as const;

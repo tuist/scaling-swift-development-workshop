@@ -10,7 +10,13 @@ export const paths = {
   repoRoot,
   /** The sample project we spend the workshop fixing. */
   app: path.join(repoRoot, "app"),
+  /** Hand-maintained and committed, until task 3 generates it instead. */
   xcodeproj: path.join(repoRoot, "app", "RockyFeed.xcodeproj"),
+  /** Only exists once Tuist generates it — the deps live beside the app in here. */
+  xcworkspace: path.join(repoRoot, "app", "RockyFeed.xcworkspace"),
+  /** Tuist manifests, from task 3 onwards. */
+  projectManifest: path.join(repoRoot, "app", "Project.swift"),
+  tuistManifest: path.join(repoRoot, "app", "Tuist.swift"),
   corePackage: path.join(repoRoot, "app", "Core"),
   /** Per-participant state. Gitignored — never committed. */
   workshopDir: path.join(repoRoot, ".workshop"),

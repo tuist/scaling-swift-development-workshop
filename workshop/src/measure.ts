@@ -88,6 +88,24 @@ export const buildSetting = async (name: string): Promise<string | null> => {
   return match?.[1]?.trim() ?? null;
 };
 
+/**
+ * The schemes in the generated workspace.
+ *
+ * Tuist emits one per target, so this is how we ask "what modules exist?" without
+ * grepping the manifest for target names — we check what was actually generated,
+ * which is true regardless of how someone chose to write their Swift.
+ */
+export const generatedSchemes = async (): Promise<string[]> => {
+  const result = await run("xcodebuild", ["-list", "-workspace", paths.xcworkspace, "-json"]);
+  if (!result.ok) return [];
+  try {
+    const parsed = JSON.parse(result.stdout) as { workspace?: { schemes?: string[] } };
+    return parsed.workspace?.schemes ?? [];
+  } catch {
+    return [];
+  }
+};
+
 /** Size of the compilation cache on disk, in bytes. Caches aren't free. */
 export const compilationCacheBytes = async (): Promise<number> => {
   const result = await run("du", ["-sk", paths.compilationCache]);
