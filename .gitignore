@@ -1,0 +1,23 @@
+# === Xcode / SwiftPM ===
+# NOTE: RockyFeed's .xcodeproj IS committed on purpose — that's part of the
+# "before" state. Feeling the pain of a checked-in Xcode project (merge
+# conflicts, churn) is one of the things this workshop is about.
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+.build/
+build/
+*.xcresult
+*.xcactivitylog
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved.backup
+
+# === Workshop runner ===
+workshop/node_modules/
+# Local, per-participant progress + measurements. Never committed.
+.workshop/
+
+# === macOS ===
+.DS_Store

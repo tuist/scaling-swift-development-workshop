@@ -1,0 +1,41 @@
+# Tooling for the "Scaling Swift Development" workshop.
+#
+# `mise` pins the exact versions everyone uses, so the workshop behaves the same
+# on every machine. This is already the *good* baseline for tooling — later in
+# the workshop we make it fast on CI too (caching the install step).
+[tools]
+node = "24"
+hyperfine = "1.20.0"
+
+# The workshop runner (a small TUI). Run it any time to see your next task,
+# validate your work, and measure build/test times.
+#
+#   mise run workshop
+#
+# Dependencies install themselves on first launch, so there's nothing to set up.
+[tasks.workshop]
+description = "Launch the workshop TUI"
+dir = "{{ config_root }}/workshop"
+quiet = true
+run = """
+# Resolve mise's Node explicitly and put it first on PATH.
+#
+# If you use nvm/asdf, their shims are often earlier in PATH than mise's, so a
+# bare `node` (or any `#!/usr/bin/env node` shebang, like tsx's) can silently
+# pick up an ancient Node and fail with a confusing ESM error. Being explicit
+# here means the workshop runs the same way on everyone's machine.
+NODE_BIN="$(mise which node)"
+export PATH="$(dirname "$NODE_BIN"):$PATH"
+
+[ -d node_modules ] || npm install --silent --no-fund --no-audit
+exec "$NODE_BIN" ./node_modules/tsx/dist/cli.mjs src/index.ts
+"""
+
+[tasks.setup]
+description = "Install the workshop runner's dependencies"
+dir = "{{ config_root }}/workshop"
+run = """
+NODE_BIN="$(mise which node)"
+export PATH="$(dirname "$NODE_BIN"):$PATH"
+npm install --no-fund --no-audit
+"""

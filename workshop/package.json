@@ -1,0 +1,21 @@
+{
+  "name": "scaling-swift-workshop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The workshop runner for Scaling Swift Development: tasks, validation, and measurements.",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "execa": "^9.5.2",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

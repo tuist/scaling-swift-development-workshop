@@ -1,0 +1,84 @@
+# XcodeGen spec used to AUTHOR the RockyFeed sample project.
+#
+# ⚠️ This file is maintainer-only tooling. It is deliberately NOT part of the
+# workshop: participants get a plain, checked-in `RockyFeed.xcodeproj`, because
+# "a hand-maintained Xcode project with native SPM" is exactly the starting point
+# the workshop is about. Introducing generation is something we do *later*, with
+# Tuist, as an improvement — so the before-state must not already be generated.
+#
+# To regenerate the sample project after editing this file:
+#
+#   ./maintainer/regenerate-sample.sh
+#
+name: RockyFeed
+
+options:
+  bundleIdPrefix: dev.tuist.rockyfeed
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+packages:
+  # The god module. A local Swift package that every feature imports, and that
+  # owns all third-party dependencies.
+  Core:
+    path: Core
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  RockyFeed:
+    type: application
+    platform: iOS
+    sources:
+      - path: RockyFeed
+    dependencies:
+      - package: Core
+        product: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.tuist.rockyfeed
+        PRODUCT_NAME: RockyFeed
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"
+    postBuildScripts:
+      # Deliberately declares no inputFiles and no outputFiles. See the script.
+      - path: Scripts/stamp-build-info.sh
+        name: Stamp build info
+        basedOnDependencyAnalysis: false
+
+  RockyFeedTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: RockyFeedTests
+    dependencies:
+      - target: RockyFeed
+      - package: Core
+        product: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.tuist.rockyfeed.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  RockyFeed:
+    build:
+      targets:
+        RockyFeed: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - RockyFeedTests
