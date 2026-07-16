@@ -1,4 +1,5 @@
 import { buildEnv, cleanBuild, incrementalBuild, labels, resolvePackages } from "../commands.js";
+import { shell } from "../ui.js";
 import { readMeasurement } from "../measure.js";
 import { renderTable } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
@@ -64,30 +65,37 @@ first run away.
 ${brand.dim("The talk's hyperfine slide has the shape of it. Or take the next reveal and")}
 ${brand.dim("get on with your day.")}`;
 
-const commands = `${brand.dim("Run these from the repo root, in your own terminal.")}
+// Rendered bare, so any selection copies cleanly.
+//
+// ⚠️ Keep apostrophes out of these comments. zsh only honours `#` at an
+// interactive prompt when `interactive_comments` is set, and it is OFF in a
+// stock zsh with no .zshrc. Without it a pasted comment is merely noisy
+// ("command not found: #") — but one containing `isn't` reads as an unmatched
+// quote, drops the shell into a `quote>` continuation, and silently swallows the
+// commands underneath. Plain ASCII, no apostrophes.
+const commands = shell(`# Run these from the repo root, one at a time, and watch each one.
 
-${brand.bold("Set the build command once")} ${brand.dim("— every benchmark today reuses it, which is")}
-${brand.dim("what keeps the comparisons honest.")}
-
+# Set the build command once. Every benchmark today reuses it, which is
+# what keeps the comparisons honest.
 ${buildEnv}
 
-${brand.bold("1. Resolve the packages first")} ${brand.dim("— once, untimed. Otherwise your first")}
-${brand.dim("clean build also clones Alamofire and Kingfisher, and you've measured resolution.")}
-
+# 1. Resolve the packages once, untimed. Otherwise your first clean build
+#    also clones Alamofire and Kingfisher, and you have measured resolution
+#    instead of compilation.
 ${resolvePackages}
 
-${brand.bold("2. Clean build")} ${brand.dim("— wipe the products, keep the resolved packages")}
-
+# 2. Clean build. --prepare wipes the products before each run.
+#    --warmup throws the first, cold run away.
 ${cleanBuild(labels.baselineClean)}
 
-${brand.bold("3. No-op build")} ${brand.dim("— warm up first, so every timed run is a real no-op")}
-
+# 3. No-op build. No --prepare: nothing to reset. The warmup is what
+#    guarantees the build is already done before the clock starts.
 ${incrementalBuild(labels.baselineIncremental)}
 
-${brand.dim("Together, a couple of minutes. That wait is not lost time — it's the wait your")}
-${brand.dim("team pays all day, and it's why any of this is worth doing.")}
-
-${brand.dim("Then pick \"Validate my work\".")}`;
+# A couple of minutes altogether. That wait is not lost time. It is the wait
+# your team pays all day, and the reason any of this is worth doing.
+#
+# Then: Validate my work.`);
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
@@ -198,6 +206,7 @@ export const task01: WorkshopTask = {
       hint: "The full answer, copy-pasteable",
       title: "The commands",
       body: commands,
+      copyable: true,
     },
   ],
   validate,

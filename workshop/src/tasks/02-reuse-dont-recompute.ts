@@ -1,4 +1,5 @@
 import { buildEnv, cleanBuild, coldCacheBuild, labels } from "../commands.js";
+import { shell } from "../ui.js";
 import { buildSetting, compilationCacheBytes, readMeasurement } from "../measure.js";
 import { renderComparison } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
@@ -71,20 +72,25 @@ consequences.
 ${brand.dim("Watch what the first cached build does. It won't be what you expect, and that")}
 ${brand.dim("surprise is the lesson.")}`;
 
-const commands = `${brand.bold("If $BUILD isn't set in this shell any more:")}
+// See the note in Task 1: no apostrophes in these comments. A stock zsh has
+// interactive_comments off, and an apostrophe turns a harmless comment into an
+// unmatched quote that eats the commands below it.
+const commands = shell(`# Run these from the repo root, one at a time, and watch each one.
 
+# If BUILD is no longer set in this shell:
 ${buildEnv}
 
-${brand.bold("1. Clean build, cache warm")} ${brand.dim("— run this twice. The first fills the cache,")}
-${brand.dim("the second reads it. Only the second is the number you want.")}
-
+# 1. Clean build with the cache warm.
+#    The --warmup run does double duty here: it fills the cache, so every
+#    timed run is reading one rather than writing one.
 ${cleanBuild(labels.cachedClean)}
 
-${brand.bold("2. Clean build, cache cold")} ${brand.dim("— products and cache both gone")}
-
+# 2. Clean build with the cache cold. Products and cache both gone before
+#    each run: a fresh CI runner, or the morning after an Xcode update.
+#    One run, because it is the expensive one.
 ${coldCacheBuild(labels.coldCacheClean)}
 
-${brand.dim("Then \"Validate my work\".")}`;
+# Then: Validate my work, and So what did it cost.`);
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
@@ -206,6 +212,7 @@ export const task02: WorkshopTask = {
       hint: "The full answer, copy-pasteable",
       title: "The commands",
       body: commands,
+      copyable: true,
     },
     {
       id: "verdict",

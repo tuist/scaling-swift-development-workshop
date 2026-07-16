@@ -5,7 +5,7 @@ import { allPassed, type WorkshopTask } from "./tasks/types.js";
 import { loadState, markCompleted, markVisited } from "./state.js";
 import { paths } from "./paths.js";
 import { brand, symbols } from "./theme.js";
-import { note } from "./ui.js";
+import { codeBlock, note } from "./ui.js";
 
 const statusMarker = (task: WorkshopTask, completed: number[]): string =>
   completed.includes(task.id) ? symbols.pass : symbols.pending;
@@ -124,7 +124,8 @@ const showTask = async (task: WorkshopTask): Promise<void> => {
     const reveal = (task.reveals ?? []).find((candidate) => `reveal:${candidate.id}` === choice);
     if (reveal) {
       const body = reveal.resolve ? await reveal.resolve() : reveal.body;
-      note(body, reveal.title);
+      if (reveal.copyable) codeBlock(body, reveal.title);
+      else note(body, reveal.title);
     }
   }
 };

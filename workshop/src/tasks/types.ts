@@ -38,6 +38,12 @@ export interface Reveal {
    * own numbers. Still only ever *reads* — a reveal never does the work.
    */
   resolve?: () => Promise<string>;
+  /**
+   * Render bare, with no box or gutter, so the body can be selected and pasted.
+   * Use it for shell snippets: clack's `│  ` prefix ends up in the paste
+   * otherwise, which makes the one reveal people need to copy the one they can't.
+   */
+  copyable?: boolean;
 }
 
 export interface WorkshopTask {
