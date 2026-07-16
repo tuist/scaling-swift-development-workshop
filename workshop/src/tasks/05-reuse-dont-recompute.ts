@@ -23,11 +23,17 @@ Xcode 26 can remember it. It hashes the inputs of each compile job and stores th
 result in a content-addressed store, so the same inputs fetch an object instead of
 compiling one. It's off by default.
 
-${brand.bold("Why this lever first")}
-There's a coarser cache that works on whole modules — Bazel, Tuist. Powerful, but
-it only pays off when your dependency graph is a good shape, and RockyFeed's isn't
-yet. Xcode's cache works one compile job at a time, so it doesn't care how badly
-modularised you are. Which, today, you are.
+${brand.bold("Caches come in sizes, and this is the small one")}
+Xcode's cache works one ${brand.bold("compile job")} at a time: this file, these flags, this
+compiler. The next task uses a coarser one that works on whole ${brand.bold("modules")}.
+
+We take the fine one first because it's a single build setting, and because it
+does not care what your graph looks like. The coarse one does care — which is why
+it comes after the task where you fixed the shape, not before.
+
+${brand.dim("If you want to know how it works before you turn it on, the reveal below")}
+${brand.dim("explains it. Knowing why a cache can be wrong is the difference between using")}
+${brand.dim("one and trusting one.")}
 
 ${brand.bold("Your job")}
 
@@ -91,6 +97,45 @@ ${cleanBuild(labels.cachedClean)}
 ${coldCacheBuild(labels.coldCacheClean)}
 
 # Then: Validate my work, and So what did it cost.`);
+
+const underTheHood = `${brand.bold("It is a CAS: a content-addressed store.")}
+
+Nothing in it is keyed by filename, and nothing by timestamp. Everything is keyed
+by a hash of its own content. Ask for a hash, get the bytes — or a miss.
+
+${brand.bold("The key")}
+Before compiling a file, the compiler hashes everything that could change the
+answer:
+
+  ${brand.dim("·")} the contents of the source file
+  ${brand.dim("·")} every flag it was invoked with
+  ${brand.dim("·")} the compiler's own version
+  ${brand.dim("·")} the interfaces of the modules it imports
+
+That hash is the key. Look it up: a hit means this exact question has been
+answered before, so copy the object out and skip the compile entirely. A miss
+means compile once, then store the result under that key for next time.
+
+${brand.bold("Why the key is so paranoid")}
+Because a cache that returns the wrong answer is far worse than no cache. Change
+one flag and it is a different question, so it has to be a different key. Every
+input that could alter the output is in the hash — that's the whole contract.
+
+${brand.bold("Why it does not care about your graph")}
+It never asks "did Core change?". It only asks "have I compiled exactly this
+file, exactly this way, before?". Per-job, not per-module. That's why it works on
+a monolith — and also why it can't do the one thing the next task's cache can:
+skip a module's compilation ${brand.bold("entirely")}.
+
+${brand.bold("What it costs")}
+Thousands of tiny objects, each one a lookup. On a local disk that's free. Across
+a network it's thousands of round-trips — which is why the talk calls this cache
+${brand.bold("latency-bound")}, while a module cache moving a few large binaries is
+${brand.bold("bandwidth-bound")}. Same idea, opposite failure mode.
+
+${brand.dim("Underneath, this is swift-frontend -cache-compile-job with an LLVM CAS at")}
+${brand.dim("-cas-path. Xcode drives it for you; the flags are worth knowing about because")}
+${brand.dim("they are what you reach for when it misbehaves.")}`;
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
@@ -191,14 +236,21 @@ const verdict = async (): Promise<string> => {
   return `${lines.join("\n")}\n\n${reading}`;
 };
 
-export const task02: WorkshopTask = {
-  id: 2,
+export const task05: WorkshopTask = {
+  id: 5,
   slug: "reuse-dont-recompute",
   stage: "Stage 03 · The build",
   title: "Reuse, don't recompute",
   summary: "Turn on Xcode's compilation cache, then find out what it really cost.",
   brief,
   reveals: [
+    {
+      id: "hood",
+      label: "How does it actually work?",
+      hint: "Content-addressed storage, and why the key is paranoid",
+      title: "Under the hood",
+      body: underTheHood,
+    },
     {
       id: "hint",
       label: "Give me a hint",
@@ -224,5 +276,5 @@ export const task02: WorkshopTask = {
     },
   ],
   validate,
-  solutionBranch: "solutions/02",
+  solutionBranch: "solutions/05",
 };

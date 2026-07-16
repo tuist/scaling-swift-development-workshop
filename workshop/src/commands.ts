@@ -67,6 +67,20 @@ export const cleanBuild = (label: string, runs = 3): string =>
   --export-json ${exportPath(label)} \\
   "$BUILD"`;
 
+/**
+ * The same clean build, restricted to one job at a time.
+ *
+ * One timed run is enough here on purpose: we're looking for a factor of three,
+ * not three percent, and a second serial build costs another minute for a
+ * precision the conclusion doesn't need. Rigour should be proportionate to the
+ * effect you're chasing.
+ */
+export const serialCleanBuild = (label: string, runs = 1): string =>
+  `hyperfine --runs ${runs} --warmup 1 \\
+  --prepare 'rm -rf ${derivedData}/Build' \\
+  --export-json ${exportPath(label)} \\
+  "$BUILD -jobs 1"`;
+
 /** A no-op build. The warmup is load-bearing — see the hint in Task 1. */
 export const incrementalBuild = (label: string, runs = 3): string =>
   `hyperfine --runs ${runs} --warmup 1 \\
@@ -83,6 +97,7 @@ export const coldCacheBuild = (label: string, runs = 1): string =>
 export const labels = {
   baselineClean: "baseline-clean-build",
   baselineIncremental: "baseline-incremental",
+  serialClean: "serial-clean-build",
   cachedClean: "cached-clean-build",
   coldCacheClean: "cold-cache-clean-build",
 } as const;
