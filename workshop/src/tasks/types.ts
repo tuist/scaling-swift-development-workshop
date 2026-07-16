@@ -38,6 +38,15 @@ export interface WorkshopTask {
   brief: string;
   actions?: TaskAction[];
   validate: () => Promise<ValidationResult>;
-  /** Checkpoint branch to jump to if someone gets stuck. */
+  /**
+   * Checkpoint branch holding this task's solved state, and the starting point
+   * for the next task.
+   */
   solutionBranch: string;
+  /**
+   * Shown instead of the checkout instructions when a branch can't actually
+   * solve the task — a measurement task, for instance, has to be run on your own
+   * machine, and a checked-in number would be someone else's.
+   */
+  stuckNote?: string;
 }

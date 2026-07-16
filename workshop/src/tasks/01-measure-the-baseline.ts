@@ -212,4 +212,16 @@ export const task01: WorkshopTask = {
   ],
   validate,
   solutionBranch: "solutions/01",
+  // This task is deliberately the one you can't skip by checking out a branch.
+  stuckNote:
+    `There's no branch to check out for this one, and that's on purpose.\n\n` +
+    `A baseline is a measurement of ${brand.bold("your")} machine. A number committed to git\n` +
+    `would be someone else's laptop, on some other day, and every comparison you\n` +
+    `made against it for the rest of the day would be fiction.\n\n` +
+    `${brand.bold("If the measurement won't run:")}\n\n` +
+    `  ${brand.dim("hyperfine not found")}      → ${brand.accent("mise install")}\n` +
+    `  ${brand.dim("xcodebuild fails")}         → open ${brand.accent("app/RockyFeed.xcodeproj")} and build once by hand;\n` +
+    `                           Xcode will tell you what's wrong far better than we can\n` +
+    `  ${brand.dim("no iOS simulator")}         → install an iOS runtime in Xcode › Settings › Components\n\n` +
+    `${brand.dim("Ask. This is the one step everything else is measured against.")}`,
 };

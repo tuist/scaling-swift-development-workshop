@@ -100,10 +100,11 @@ const showTask = async (task: WorkshopTask): Promise<void> => {
 
     if (choice === "stuck") {
       p.note(
-        `This task's solved state lives on ${brand.accent(task.solutionBranch)}.\n\n` +
-          `  ${brand.dim("git stash")}          ${brand.dim("# keep whatever you have")}\n` +
-          `  ${brand.dim(`git checkout ${task.solutionBranch}`)}\n\n` +
-          `Then come back and validate. There's no shame in it — the point is the\nnext task, not this one.`,
+        task.stuckNote ??
+          `This task's solved state lives on ${brand.accent(task.solutionBranch)}.\n\n` +
+            `  ${brand.dim("git stash")}          ${brand.dim("# keep whatever you have")}\n` +
+            `  ${brand.dim(`git checkout ${task.solutionBranch}`)}\n\n` +
+            `Then come back and validate. There's no shame in it — the point is the\nnext task, not this one.`,
         "Stuck?",
       );
       continue;
