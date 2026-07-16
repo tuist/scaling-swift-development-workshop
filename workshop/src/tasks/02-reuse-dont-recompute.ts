@@ -35,9 +35,16 @@ ${brand.bold("Your job")}
   3. Then measure it with the cache thrown away → ${brand.accent(labels.coldCacheClean)}${brand.dim(".json")}
 
 ${brand.bold("Step 3 is not optional, and it is the point.")}
-A cache is not free money. Before you tell your team to turn this on, you should
-be able to say what it costs as well as what it saves — and there's exactly one
-way to know.
+A warm cache is the build you have all day. A cold one is the first build, a fresh
+CI runner, the morning after an Xcode update — and filling a cache is not the same
+work as reading one.
+
+So: what does a cold cache cost, compared to having no cache at all? Don't guess,
+and don't take our word for it. It's your machine, and the answer is one command
+away.
+
+${brand.dim("Before you tell your team to turn this on, you want to be able to say what it")}
+${brand.dim("costs as well as what it saves. There's exactly one way to know that.")}
 
 ${brand.dim("Go and look in Xcode's build settings first. Search is your friend and the")}
 ${brand.dim("setting isn't hiding. Hint below if you want it.")}`;

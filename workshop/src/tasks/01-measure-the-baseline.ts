@@ -41,18 +41,25 @@ ${brand.bold("Now the thinking part.")}
 
 A ${brand.bold("clean build")} must start from nothing every time, so something has to throw the
 build products away before each run — but ${brand.bold("only")} the products. Wipe all of
-DerivedData and you'd re-resolve the packages too, and end up measuring that
-instead.
+DerivedData and you'd re-resolve the packages too, and measure that instead.
 
-Same trap from the other side: if the packages have ${brand.bold("never")} been resolved, your
-first run resolves them and the rest don't. That doesn't average out — it lands
-entirely in run 1 and drags the mean somewhere meaningless. Resolve once, up
-front, untimed. Resolving and building are different stages, and the point is to
-time them separately.
+A ${brand.bold("no-op build")} is the opposite. It needs no resetting; it needs the build to be
+${brand.bold("already done")} before the clock starts. If the tree is stale when you begin, run 1
+measures a real rebuild and the mean is a work of fiction.
 
-A ${brand.bold("no-op build")} has the opposite problem. It needs no resetting; it needs the
-build to be ${brand.bold("already done")} before the clock starts. If the tree is stale when you
-begin, your first run measures a real rebuild and the mean is a work of fiction.
+${brand.bold("And the rule that catches everyone: the first run of anything is a lie.")}
+
+Not because machines are noisy — because the first run does work the others never
+repeat. It resolves the packages. It builds the module cache. It warms the OS file
+cache. That cost doesn't average out across runs; it lands entirely in run 1 and
+drags the mean somewhere meaningless.
+
+${brand.dim("Measured on this very project: [44.5s, 26.1s, 24.7s]. The honest number is 25s,")}
+${brand.dim("the mean says 32s, and σ says none of it is comparable to anything.")}
+
+So: resolve once up front, untimed — resolving and building are separate stages of
+the pipeline and deserve separate numbers — and let both benchmarks throw their
+first run away.
 
 ${brand.dim("The talk's hyperfine slide has the shape of it. Or take the next reveal and")}
 ${brand.dim("get on with your day.")}`;
@@ -114,17 +121,20 @@ const validate = async (): Promise<ValidationResult> => {
   // baseline: everything else today is measured against it, so a number that
   // looks plausible and isn't will quietly poison the whole day.
   if (clean) {
-    // Seen for real: run 1 resolved the packages, run 2 didn't. 47s ± 25s, when
-    // the honest number was 29s.
-    const noisy = clean.runs > 1 && clean.stddev > clean.mean * 0.3;
+    // Threshold picked from real runs, not taste. A first run that resolved the
+    // packages gave σ = 54% of the mean; one that was merely cold gave 35%; a
+    // properly warmed-up run sits in single digits. 25% sits clear of honest
+    // noise on a busy laptop and still catches both mistakes — and a check that
+    // fails good work would be worse than no check at all.
+    const noisy = clean.runs > 1 && clean.stddev > clean.mean * 0.25;
     checks.push({
       label: "The clean build measurement is steady",
       ok: !noisy,
       detail: noisy
         ? `σ of ${formatDuration(clean.stddev)} on a ${formatDuration(clean.mean)} mean — the runs ` +
-          `disagree far too much to compare anything against. The usual cause: the packages ` +
-          `weren't resolved yet, so run 1 cloned Alamofire and Kingfisher and the rest didn't. ` +
-          `Resolve first (see the hint), then measure again.`
+          `disagree too much to compare anything against.\n  Usually run 1 did work the others ` +
+          `didn't: resolved the packages, or warmed a cold module cache. Resolve first, add ` +
+          `--warmup 1, and measure again. (Or your machine is busy — close things.)`
         : undefined,
     });
   }

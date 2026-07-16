@@ -52,9 +52,17 @@ export const resolvePackages = `xcodebuild -resolvePackageDependencies \\
   -scheme ${scheme} \\
   -derivedDataPath ${derivedData}`;
 
-/** A clean build: wipe the products, keep the resolved packages. */
+/**
+ * A clean build: wipe the products before each run, keep the resolved packages.
+ *
+ * The warmup matters as much as the prepare. Measured on a fresh DerivedData,
+ * even with packages already resolved, the runs came out [44.5s, 26.1s, 24.7s] —
+ * the first build is cold in ways that never repeat (build description, module
+ * cache, the OS file cache), so it drags the mean up by a third and inflates σ to
+ * where nothing is comparable. One untimed run throws that away.
+ */
 export const cleanBuild = (label: string, runs = 3): string =>
-  `hyperfine --runs ${runs} \\
+  `hyperfine --runs ${runs} --warmup 1 \\
   --prepare 'rm -rf ${derivedData}/Build' \\
   --export-json ${exportPath(label)} \\
   "$BUILD"`;
