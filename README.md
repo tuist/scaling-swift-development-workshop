@@ -42,7 +42,7 @@ two years.
 ```bash
 git clone <this-repo>
 cd scaling-swift-development-workshop
-mise install     # Node + hyperfine, pinned
+mise install     # Node + hyperfine, pinned — native on Apple Silicon, no Rosetta needed
 ```
 
 ## Running the workshop

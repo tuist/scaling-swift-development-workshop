@@ -5,7 +5,16 @@
 # the workshop we make it fast on CI too (caching the install step).
 [tools]
 node = "24"
-hyperfine = "1.20.0"
+
+# hyperfine via `ubi` rather than the default `aqua` backend.
+#
+# `hyperfine = "1.20.0"` resolves through aqua, which hands an Apple Silicon Mac
+# the x86_64 build even though the release ships aarch64. It runs — under Rosetta,
+# if Rosetta is installed at all — and on a clean M-series machine it doesn't run
+# at all. That would strand everyone on the very first benchmark of the day.
+#
+# ubi picks the asset that matches the host, so everyone gets a native binary.
+"ubi:sharkdp/hyperfine" = "1.20.0"
 
 # The workshop runner (a small TUI). Run it any time to see your next task,
 # validate your work, and measure build/test times.
@@ -18,14 +27,17 @@ description = "Launch the workshop TUI"
 dir = "{{ config_root }}/workshop"
 quiet = true
 run = """
-# Resolve mise's Node explicitly and put it first on PATH.
+# Put the tools mise pinned at the FRONT of PATH.
 #
-# If you use nvm/asdf, their shims are often earlier in PATH than mise's, so a
-# bare `node` (or any `#!/usr/bin/env node` shebang, like tsx's) can silently
-# pick up an ancient Node and fail with a confusing ESM error. Being explicit
-# here means the workshop runs the same way on everyone's machine.
+# mise appends its tool paths, so anything already earlier wins: nvm shadows Node
+# (a bare `node`, or any `#!/usr/bin/env node` shebang like tsx's, picks up an
+# ancient one and dies with a confusing ESM error), and a Homebrew hyperfine
+# shadows the pinned one, quietly benchmarking with a version we didn't choose.
+#
+# Resolving both explicitly means everyone measures with the same tools.
 NODE_BIN="$(mise which node)"
-export PATH="$(dirname "$NODE_BIN"):$PATH"
+HYPERFINE_BIN="$(mise which hyperfine)"
+export PATH="$(dirname "$NODE_BIN"):$(dirname "$HYPERFINE_BIN"):$PATH"
 
 [ -d node_modules ] || npm install --silent --no-fund --no-audit
 exec "$NODE_BIN" ./node_modules/tsx/dist/cli.mjs src/index.ts
