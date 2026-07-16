@@ -11,6 +11,7 @@ import {
 } from "../measure.js";
 import { renderMachine, renderMeasurement } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
+import { note } from "../ui.js";
 import { hasBinary } from "../shell.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
 
@@ -130,7 +131,7 @@ const measureBaseline = async (): Promise<void> => {
 
   const measurement = await saveMeasurement("baseline", metrics);
 
-  p.note(
+  note(
     `${renderMeasurement(measurement)}\n\n${renderMachine(measurement)}`,
     "Your baseline",
   );

@@ -13,6 +13,7 @@ import {
 } from "../measure.js";
 import { renderComparison, renderMeasurement } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
+import { note } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
 
 const SETTING = "COMPILATION_CACHE_ENABLE_CACHING";
@@ -104,7 +105,7 @@ const measureAndCompare = async (): Promise<void> => {
   }
 
   const current = await saveMeasurement("task-02", metrics);
-  p.note(renderComparison(baseline, current), "Baseline → with the cache on");
+  note(renderComparison(baseline, current), "Baseline → with the cache on");
 
   const before = baseline.metrics.cleanBuild;
   const after = metrics.cleanBuild;
@@ -162,7 +163,7 @@ const measureColdCache = async (): Promise<void> => {
     `${"Clean build, cache cold".padEnd(32)} ${brand.error(formatDuration(cold.mean))}   ${brand.dim("← filling it")}`,
     `${"Clean build, cache warm".padEnd(32)} ${brand.success(formatDuration(warm?.metrics.cleanBuild?.mean ?? NaN))}   ${brand.dim("← reading it")}`,
   ];
-  p.note(rows.join("\n"), "What the cache actually costs");
+  note(rows.join("\n"), "What the cache actually costs");
 
   const noCache = baseline?.metrics.cleanBuild?.mean;
   if (noCache && cold.mean > noCache) {

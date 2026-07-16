@@ -3,6 +3,7 @@ import { findTask, nextTask, tasks } from "./tasks/index.js";
 import { allPassed, type WorkshopTask } from "./tasks/types.js";
 import { loadState, markCompleted, markVisited } from "./state.js";
 import { brand, symbols } from "./theme.js";
+import { note } from "./ui.js";
 
 const statusMarker = (task: WorkshopTask, completed: number[]): string =>
   completed.includes(task.id) ? symbols.pass : symbols.pending;
@@ -45,7 +46,7 @@ const runValidation = async (task: WorkshopTask): Promise<void> => {
     const head = `${check.ok ? symbols.pass : symbols.fail} ${check.label}`;
     return check.ok || !check.detail ? head : `${head}\n  ${brand.dim(check.detail)}`;
   });
-  p.note(lines.join("\n"), passed ? "Passed" : "Not yet");
+  note(lines.join("\n"), passed ? "Passed" : "Not yet");
 
   if (passed) {
     await markCompleted(task.id);
@@ -63,7 +64,7 @@ const runValidation = async (task: WorkshopTask): Promise<void> => {
 
 const showTask = async (task: WorkshopTask): Promise<void> => {
   await markVisited(task.id);
-  p.note(task.brief, `${task.stage} · Task ${task.id} — ${task.title}`);
+  note(task.brief, `${task.stage} · Task ${task.id} — ${task.title}`);
 
   for (;;) {
     // Keep every option the same shape — clack infers the value type from the
@@ -89,7 +90,7 @@ const showTask = async (task: WorkshopTask): Promise<void> => {
     if (p.isCancel(choice) || choice === "back") return;
 
     if (choice === "brief") {
-      p.note(task.brief, `${task.stage} · Task ${task.id} — ${task.title}`);
+      note(task.brief, `${task.stage} · Task ${task.id} — ${task.title}`);
       continue;
     }
 
@@ -99,7 +100,7 @@ const showTask = async (task: WorkshopTask): Promise<void> => {
     }
 
     if (choice === "stuck") {
-      p.note(
+      note(
         task.stuckNote ??
           `This task's solved state lives on ${brand.accent(task.solutionBranch)}.\n\n` +
             `  ${brand.dim("git stash")}          ${brand.dim("# keep whatever you have")}\n` +
