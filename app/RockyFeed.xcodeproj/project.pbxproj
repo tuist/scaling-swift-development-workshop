@@ -98,7 +98,6 @@
 		D5308FF3E8C2363F68493679 /* FeedSponsors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AA46104280E4014D42F4265 /* FeedSponsors.swift */; };
 		D8CD08EB41DB039CEB03DB61 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 553CFE376D0FC819E4745454 /* SearchView.swift */; };
 		D993F8F5B35724DECC4A3370 /* PlayerSleepTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4928667A0A6878BDA6B06E9 /* PlayerSleepTimer.swift */; };
-		DABD7BECAA2FD5351E1B2A4A /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D971199D44B58C128842D /* BuildInfo.swift */; };
 		DCF2FA26718F79A12485102B /* FeedTrackSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE53B5638CAF2D2C291D370E /* FeedTrackSection.swift */; };
 		DD22AFD5757BB40B13A041F2 /* PlayerNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FFE99C3E1B55F9547269F80 /* PlayerNotes.swift */; };
 		DD9F5EE76274299EF2A87017 /* SettingsSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D6FA94A128C3FE0008E4D9D /* SettingsSync.swift */; };
@@ -171,7 +170,6 @@
 		6990725722A317A6213C0973 /* RockyFeed.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RockyFeed.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		740B7D96C2B1D69382CDC1DD /* FeedLive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedLive.swift; sourceTree = "<group>"; };
 		748A5F0ABED2A33E2BBCDE0D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
-		778D971199D44B58C128842D /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
 		786FCE2C5ACD0024B477980D /* LoginSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginSupport.swift; sourceTree = "<group>"; };
 		7DCC3F710FF3BF9AADA16949 /* ProfileBadges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileBadges.swift; sourceTree = "<group>"; };
 		7F65C2998406F84CC3EBB8D9 /* SearchNearby.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchNearby.swift; sourceTree = "<group>"; };
@@ -441,7 +439,6 @@
 		AB42D7AE84770ECD3C727609 /* RockyFeed */ = {
 			isa = PBXGroup;
 			children = (
-				778D971199D44B58C128842D /* BuildInfo.swift */,
 				06ECA55E5B1762A52180DC8D /* RockyFeedApp.swift */,
 				F8A0AFE99AB5D33E302BF130 /* RootView.swift */,
 				750B6222C1E0198CAD67DF5F /* Features */,
@@ -612,7 +609,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DABD7BECAA2FD5351E1B2A4A /* BuildInfo.swift in Sources */,
 				A5B3F7955480B8855BDA64AD /* FeedArchive.swift in Sources */,
 				0CFECDDD9CE8C995C12251D3 /* FeedBookmarks.swift in Sources */,
 				343770EA776145E5E22DC82C /* FeedDigest.swift in Sources */,
