@@ -20,6 +20,15 @@
 //      imports Core. That serialisation is the god module, and it's the thing we
 //      measure now and remove later.
 //
+//   3. DISTRIBUTION. The weight is spread across the six features rather than
+//      piled into the design system, and this is load-bearing. An earlier cut put
+//      60 of Core's 82 files in one Components bucket; splitting Core into layers
+//      then bought nothing (16.8s -> 16.4s), because 61 of those files *were* one
+//      layer and simply became the new critical path. You cannot parallelise a
+//      monolith by renaming it. The mass has to be genuinely divisible — six
+//      features that can compile at once — which is exactly the shape the talk
+//      draws: features on top, services beneath, foundations at the bottom.
+//
 // File count is not the thing that makes a project painful to work in — build
 // time is. Participants only ever open a handful of these.
 //
@@ -252,13 +261,7 @@ const COMPONENTS = [
   "TalkCard", "SessionCard", "SpeakerCard", "TrackCard", "AgendaRow", "BookmarkRow",
   "TagChip", "AvatarTile", "StatTile", "EmptyStateCard", "BannerCard", "NoticeRow",
   "ScheduleHeader", "TrackLegend", "RatingRow", "ShareRow", "TimelineRow", "VenueCard",
-  "SponsorCard", "HighlightCard", "ProgressRow", "CountdownCard", "FilterChip", "SortRow",
-  "RoomCard", "FloorPlanRow", "BreakCard", "WorkshopCard", "LightningRow", "PanelCard",
-  "QuestionRow", "PollCard", "FeedbackRow", "SurveyCard", "TranscriptRow", "CaptionRow",
-  "ChapterRow", "QueueRow", "DownloadRow", "OfflineCard", "SyncRow", "ConflictCard",
-  "ReminderRow", "CalendarCard", "MapRow", "TravelCard", "HotelRow", "WeatherCard",
-  "SocialRow", "MentionCard", "ThreadRow", "ReplyCard", "ReactionRow", "BadgeCard",
-  "StreakRow", "LevelCard", "AchievementRow", "LeaderboardCard", "InviteRow", "TeamCard",
+  "SponsorCard", "HighlightCard",
 ];
 
 const SERVICES = [
@@ -270,25 +273,35 @@ const SERVICES = [
 const FEATURES = {
   Feed: [
     "FeedHighlights", "FeedTrackSection", "FeedUpcoming", "FeedBookmarks", "FeedTrending",
-    "FeedRecap", "FeedSponsors", "FeedNotices", "FeedLive", "FeedNearby", "FeedForYou", "FeedHistory",
+    "FeedRecap", "FeedSponsors", "FeedNotices", "FeedLive", "FeedNearby", "FeedForYou",
+    "FeedHistory", "FeedDigest", "FeedPinned", "FeedArchive",
   ],
   Search: [
     "SearchSuggestions", "SearchRecents", "SearchByTrack", "SearchBySpeaker", "SearchEmpty",
     "SearchFilters", "SearchResultsGrid", "SearchTags", "SearchPopular", "SearchSaved",
+    "SearchHistory", "SearchNearby", "SearchAdvanced", "SearchVoice", "SearchScopes",
   ],
   Profile: [
     "ProfileStats", "ProfileBookmarks", "ProfileActivity", "ProfileBadges", "ProfileSchedule",
-    "ProfileFollowing", "ProfileNotes", "ProfileDownloads", "ProfileTeams",
+    "ProfileFollowing", "ProfileNotes", "ProfileDownloads", "ProfileTeams", "ProfileStreak",
+    "ProfileShare", "ProfileHistory", "ProfileAchievements", "ProfileInvites", "ProfileDigest",
   ],
   Player: [
     "PlayerQueue", "PlayerTranscript", "PlayerChapters", "PlayerRelated", "PlayerNotes",
-    "PlayerSpeed", "PlayerCaptions", "PlayerSleepTimer", "PlayerAirplay",
+    "PlayerSpeed", "PlayerCaptions", "PlayerSleepTimer", "PlayerAirplay", "PlayerBookmarks",
+    "PlayerShare", "PlayerQuality", "PlayerHistory", "PlayerLyrics", "PlayerEqualizer",
   ],
   Settings: [
     "SettingsAppearance", "SettingsNotifications", "SettingsPrivacy", "SettingsAbout",
     "SettingsStorage", "SettingsAccount", "SettingsPlayback", "SettingsDeveloper",
+    "SettingsLanguage", "SettingsAccessibility", "SettingsData", "SettingsSecurity",
+    "SettingsBackup", "SettingsSync", "SettingsAdvanced",
   ],
-  Login: ["LoginBenefits", "LoginFooter", "LoginTerms", "LoginSSO"],
+  Login: [
+    "LoginBenefits", "LoginFooter", "LoginTerms", "LoginSSO", "LoginHelp", "LoginRecovery",
+    "LoginPrivacy", "LoginWelcome", "LoginFeatures", "LoginTestimonials", "LoginFAQ",
+    "LoginSupport", "LoginLegal", "LoginRegions", "LoginAccessibility",
+  ],
 };
 
 const write = async (dir, name, contents) => {

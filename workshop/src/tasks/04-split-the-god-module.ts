@@ -65,11 +65,24 @@ ${brand.bold("A layering that works")}
   ${brand.accent("CoreDesignSystem")}   DesignSystem, Components        → nothing
   ${brand.accent("CoreNetworking")}     Networking                      → Alamofire
   ${brand.accent("CoreImages")}         Images                          → Kingfisher, CoreDesignSystem
-  ${brand.accent("CoreServices")}       Session, Storage, Feed, Ranking → CoreModels, CoreNetworking
+  ${brand.accent("CoreDomain")}         Session, Storage, Feed, Ranking → CoreModels, CoreNetworking
 
 ${brand.accent("CoreModels")} and ${brand.accent("CoreDesignSystem")} depend on nothing, so they start ${brand.bold("immediately")} —
 alongside Alamofire and Kingfisher instead of behind them. That's 61 files off the
 critical path.
+
+${brand.bold("⚠️ Do not call that last one CoreServices.")}
+It is the obvious name, and it detonates. ${brand.accent("CoreServices")} is an Apple system
+framework, and Kingfisher and Alamofire both import ${brand.dim("MobileCoreServices")}, whose
+umbrella header includes ${brand.dim("<CoreServices/CoreServices.h>")}. Name a module CoreServices
+and Clang resolves that include to ${brand.bold("yours")}, then fails to build a system module with
+an error that mentions neither your module nor your code:
+
+  ${brand.error("MobileCoreServices.h: fatal error: 'CoreServices/CoreServices.h' file not found")}
+
+${brand.dim("Cost us twelve errors and a confused twenty minutes. A monolith cannot make")}
+${brand.dim("this mistake, because it only has one name. The moment you start naming")}
+${brand.dim("modules, you are in Apple's namespace with them.")}
 
 ${brand.bold("You don't have to move any files")}
 Tuist's ${brand.dim("sources:")} takes globs, so a module boundary is a manifest decision. Point
@@ -90,7 +103,7 @@ git show solutions/04:app/Project.swift > app/Project.swift
 # 2. import Core no longer exists. The app files need the real modules.
 #    Crude, and honest: you would tidy these per-file eventually.
 grep -rl '^import Core$' app/RockyFeed | while read -r f; do
-  perl -i -pe 's/^import Core$/import CoreDesignSystem\\nimport CoreImages\\nimport CoreModels\\nimport CoreServices/' "$f"
+  perl -i -pe 's/^import Core$/import CoreDesignSystem\\nimport CoreImages\\nimport CoreModels\\nimport CoreDomain/' "$f"
 done
 
 # 3. Four files inside Core now cross a module boundary.
@@ -114,7 +127,7 @@ ${serialCleanBuild(labels.splitSerial)}
 
 # Then: Validate my work, and Did it work.`);
 
-const EXPECTED_MODULES = ["CoreDesignSystem", "CoreModels", "CoreNetworking", "CoreServices"];
+const EXPECTED_MODULES = ["CoreDesignSystem", "CoreModels", "CoreNetworking", "CoreDomain", "CoreImages"];
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
