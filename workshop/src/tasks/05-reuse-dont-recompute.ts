@@ -1,4 +1,4 @@
-import { buildEnv, cleanBuild, coldCacheBuild, labels } from "../commands.js";
+import { buildEnvGenerated, cleanBuild, coldCacheBuild, labels } from "../commands.js";
 import { shell } from "../ui.js";
 import { buildSetting, compilationCacheBytes, readMeasurement } from "../measure.js";
 import { renderComparison } from "../report.js";
@@ -37,7 +37,7 @@ ${brand.dim("one and trusting one.")}
 
 ${brand.bold("Your job")}
 
-  1. Find the setting in Xcode and turn it on
+  1. Find the setting and turn it on — in the manifest, not in Xcode
   2. Re-measure the clean build → ${brand.accent(labels.cachedClean)}${brand.dim(".json")}
   3. Then measure it with the cache thrown away → ${brand.accent(labels.coldCacheClean)}${brand.dim(".json")}
 
@@ -53,21 +53,30 @@ away.
 ${brand.dim("Before you tell your team to turn this on, you want to be able to say what it")}
 ${brand.dim("costs as well as what it saves. There's exactly one way to know that.")}
 
-${brand.dim("Go and look in Xcode's build settings first. Search is your friend and the")}
-${brand.dim("setting isn't hiding. Hint below if you want it.")}`;
+${brand.dim("Go and look for it first. It is a build setting, it is not hiding, and you")}
+${brand.dim("already know where build settings live now. Hint below if you want it.")}`;
 
-const hint = `${brand.bold("Finding it")}
-Open ${brand.accent("app/RockyFeed.xcodeproj")}, select the ${brand.accent("RockyFeed")} project — the blue icon at
-the top, ${brand.bold("not")} the target underneath — then ${brand.accent("Build Settings")} and search for
-${brand.accent("compilation cache")}.
+const hint = `${brand.bold("The setting")}
+${brand.accent("COMPILATION_CACHE_ENABLE_CACHING")}. In Xcode's UI it is ${brand.dim("Enable Compilation Caching")},
+and if you had gone looking there you would have found it.
 
-${brand.bold("Project, not target — this matters.")}
-Most of your clean build is Alamofire and Kingfisher, and those are package
-targets, not yours. Set it on the target and you've cached the small half of the
-build. Set it on the project and it reaches everything underneath.
+${brand.bold("But you generate your project now.")}
+Two tasks ago ${brand.accent("RockyFeed.xcodeproj")} became a build artefact. Type this into Xcode's
+Build Settings and the next ${brand.dim("tuist generate")} erases it — silently, and you will
+re-measure and wonder why nothing changed. It goes in ${brand.accent("app/Project.swift")}.
+
+${brand.dim("This is the tax generation charges: the UI stops being the source of truth. It")}
+${brand.dim("is also the point — a setting in a manifest is reviewable, and a setting somebody")}
+${brand.dim("clicked eight months ago is archaeology.")}
+
+${brand.bold("Project-level, not per-target — this matters.")}
+Most of your clean build is still Alamofire and Kingfisher, and those arrive as
+external package targets, not yours. Put it in the project's ${brand.dim("settings:")} base and
+it reaches everything underneath; hang it on one target and you have cached the
+small half of the build.
 
 ${brand.bold("Measuring it")}
-Same ${brand.dim("$BUILD")} command as Task 1, same clean-build shape — only the export path
+Same ${brand.dim("$BUILD")} command as task 4, same clean-build shape — only the export path
 changes, so you're comparing like with like.
 
 ${brand.bold("For the cold number")}, you need a run where the cache is empty ${brand.bold("and")} the products
@@ -84,7 +93,7 @@ ${brand.dim("surprise is the lesson.")}`;
 const commands = shell(`# Run these from the repo root, one at a time, and watch each one.
 
 # If BUILD is no longer set in this shell:
-${buildEnv}
+${buildEnvGenerated}
 
 # 1. Clean build with the cache warm.
 #    The --warmup run does double duty here: it fills the cache, so every
@@ -147,11 +156,17 @@ const validate = async (): Promise<ValidationResult> => {
     detail:
       enabled === "YES"
         ? undefined
-        : `It's currently ${enabled ?? "unset"}. Turn on "Enable Compilation Caching" on the ` +
-          `RockyFeed project — the blue icon, not the target.`,
+        : `It's currently ${enabled ?? "unset"}. Add COMPILATION_CACHE_ENABLE_CACHING to the ` +
+          `project's settings base in app/Project.swift, then regenerate. Not in Xcode's UI — ` +
+          `tuist generate would erase it.`,
   });
 
-  const baseline = await readMeasurement(labels.baselineClean);
+  // Task 4's number, not task 1's. By now the project is split, and comparing a
+  // cached split against the hand-written monolith would credit this one build
+  // setting with the whole day — or blame it, since the split is deliberately
+  // slower than where we started. The honest question is what the cache did to
+  // the project you have.
+  const baseline = await readMeasurement(labels.splitClean);
   const cached = await readMeasurement(labels.cachedClean);
   const cold = await readMeasurement(labels.coldCacheClean);
 
@@ -198,7 +213,9 @@ const validate = async (): Promise<ValidationResult> => {
 
 /** Reads back their three numbers. Still only reading — never measuring. */
 const verdict = async (): Promise<string> => {
-  const baseline = await readMeasurement(labels.baselineClean);
+  // splitClean: what this project cost before the cache, not what the day
+  // started at. See the note in validate().
+  const baseline = await readMeasurement(labels.splitClean);
   const cached = await readMeasurement(labels.cachedClean);
   const cold = await readMeasurement(labels.coldCacheClean);
   const size = await compilationCacheBytes();
@@ -206,13 +223,13 @@ const verdict = async (): Promise<string> => {
   if (!baseline || !cached || !cold) {
     return (
       `${brand.bold("Measure all three first.")}\n\n` +
-      `This only means something with the baseline from Task 1, the warm number and\n` +
-      `the cold number side by side. Getting all three is the task.`
+      `This only means something with task 4's clean build, the warm number and the\n` +
+      `cold number side by side. Getting all three is the task.`
     );
   }
 
   const lines = [
-    `${"No cache at all".padEnd(24)} ${formatDuration(baseline.mean)}`,
+    `${"No cache (task 4)".padEnd(24)} ${formatDuration(baseline.mean)}`,
     `${"Cache cold".padEnd(24)} ${brand.error(formatDuration(cold.mean))}   ${brand.dim("← filling it")}`,
     `${"Cache warm".padEnd(24)} ${brand.success(formatDuration(cached.mean))}   ${brand.dim("← reading it")}`,
     ``,
