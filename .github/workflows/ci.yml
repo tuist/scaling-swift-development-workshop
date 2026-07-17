@@ -1,0 +1,89 @@
+# RockyFeed CI — the workshop's answer to Task 9.
+#
+# Nothing here is clever. It carries to an empty runner what your laptop had by
+# accident, and it says out loud whether that worked.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  # A superseded run teaches nobody anything. Cancel it and keep the runners for
+  # work someone is waiting on.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The build stamps the commit, so the phase needs .git/HEAD to be real.
+          # A shallow clone is fine; a missing one is not.
+          fetch-depth: 1
+
+      # ── 1. Tooling ────────────────────────────────────────────────────────
+      # Keyed on mise.toml, so this hits until someone changes a pinned version.
+      # That is the point of pinning: the key should change when the contents
+      # should, and not one commit sooner.
+      - name: Restore tooling
+        id: mise-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/mise
+          key: mise-${{ runner.os }}-${{ hashFiles('mise.toml') }}
+
+      - uses: jdx/mise-action@v2
+
+      # ── 2. Resolved packages ──────────────────────────────────────────────
+      # Keyed on Package.resolved, not Package.swift: the resolution is what we
+      # are caching, and two manifests can resolve to the same thing.
+      - name: Restore packages
+        id: spm-cache
+        uses: actions/cache@v4
+        with:
+          path: app/Tuist/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('app/Tuist/Package.resolved') }}
+
+      - run: cd app && tuist install
+
+      # ── 3. The module cache (task 6) ──────────────────────────────────────
+      # restore-keys gives us a partial hit when sources moved: Tuist re-checks
+      # each module's hash anyway, so an older store still saves the modules that
+      # did not change. Without it, one edit anywhere costs a full cold build.
+      - name: Restore module cache
+        id: tuist-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/tuist
+          key: tuist-${{ runner.os }}-${{ hashFiles('app/Project.swift', 'app/Core/**/*.swift', 'app/RockyFeed/**/*.swift') }}
+          restore-keys: |
+            tuist-${{ runner.os }}-
+
+      # ── 4. Say the quiet part out loud ────────────────────────────────────
+      # A cache that silently misses looks exactly like one that works, for
+      # months. This is the number to watch — not whether a cache exists.
+      - name: Report cache hits
+        run: |
+          echo "### Cache hits" >> "$GITHUB_STEP_SUMMARY"
+          echo "| cache | hit |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| tooling | ${{ steps.mise-cache.outputs.cache-hit == 'true' && '✅' || '❌ cold' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| packages | ${{ steps.spm-cache.outputs.cache-hit == 'true' && '✅' || '❌ cold' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| modules | ${{ steps.tuist-cache.outputs.cache-hit == 'true' && '✅' || '❌ cold' }} |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.tuist-cache.outputs.cache-hit }}" != "true" ]; then
+            echo "::warning::Module cache cold. This run is slower than having no cache at all — see Task 5."
+          fi
+
+      - name: Warm the module cache
+        run: cd app && tuist cache
+
+      # ── 5. Only the tests that need running (task 7) ──────────────────────
+      # Sound only because Task 7 removed the test whose result did not follow
+      # from its inputs. Selective testing on a flaky suite is a lie with good
+      # uptime.
+      - name: Test what changed
+        run: cd app && tuist test

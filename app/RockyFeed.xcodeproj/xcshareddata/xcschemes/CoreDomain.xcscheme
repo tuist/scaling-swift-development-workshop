@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D81F3556F5A3EC76A3C4D6EC"
-               BuildableName = "CoreDomain.framework"
-               BlueprintName = "CoreDomain"
+               BuildableName = "Domain.framework"
+               BlueprintName = "Domain"
                ReferencedContainer = "container:RockyFeed.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -45,8 +45,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D81F3556F5A3EC76A3C4D6EC"
-            BuildableName = "CoreDomain.framework"
-            BlueprintName = "CoreDomain"
+            BuildableName = "Domain.framework"
+            BlueprintName = "Domain"
             ReferencedContainer = "container:RockyFeed.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -61,8 +61,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D81F3556F5A3EC76A3C4D6EC"
-            BuildableName = "CoreDomain.framework"
-            BlueprintName = "CoreDomain"
+            BuildableName = "Domain.framework"
+            BlueprintName = "Domain"
             ReferencedContainer = "container:RockyFeed.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
