@@ -17,14 +17,14 @@ import ProjectDescription
 // AFTER — the shape from the talk. Features on top, services beneath,
 // foundations at the bottom, and no arrows inside a layer:
 //
-//   CoreModels   CoreDesignSystem        Alamofire   Kingfisher
+//   Models       DesignSystem            Alamofire   Kingfisher
 //        │            │    │                 │           │
-//        │            │    └──── CoreImages ─│───────────┘
+//        │            │    └──────── Images ─│───────────┘
 //        │            │              │       ▼
-//        │            │              │  CoreNetworking
+//        │            │              │  Networking
 //        └────────────│──────────────│───────┘
 //                     │              ▼
-//                     │         CoreDomain
+//                     │         Domain
 //                     ▼              ▼
 //     FeatureLogin  FeatureFeed  FeatureSearch  FeaturePlayer
 //              FeatureProfile  FeatureSettings          ← six, in parallel
@@ -38,9 +38,9 @@ let coreRoot = "Core/Sources/Core"
 
 /// Every feature needs the design system, the models, and the app's logic.
 let featureBase: [TargetDependency] = [
-    .target(name: "CoreDesignSystem"),
-    .target(name: "CoreModels"),
-    .target(name: "CoreDomain"),
+    .target(name: "DesignSystem"),
+    .target(name: "Models"),
+    .target(name: "Domain"),
 ]
 
 func feature(_ name: String, needsImages: Bool = false) -> Target {
@@ -51,27 +51,13 @@ func feature(_ name: String, needsImages: Bool = false) -> Target {
         bundleId: "dev.tuist.rockyfeed.feature\(name.lowercased())",
         deploymentTargets: .iOS("17.0"),
         sources: ["RockyFeed/Features/\(name)/**"],
-        dependencies: needsImages ? featureBase + [.target(name: "CoreImages")] : featureBase
+        dependencies: needsImages ? featureBase + [.target(name: "Images")] : featureBase
     )
 }
 
 let project = Project(
     name: "RockyFeed",
-    settings: .settings(
-        base: [
-            "SWIFT_VERSION": "5.0",
-            "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
-            "ENABLE_USER_SCRIPT_SANDBOXING": "NO",
-            // Task 5. Set on the project so it reaches the package targets too —
-            // Alamofire and Kingfisher are most of a clean build, and setting this
-            // on the app target alone would cache the small half.
-            "COMPILATION_CACHE_ENABLE_CACHING": "YES",
-        ],
-        configurations: [
-            .debug(name: "Debug", settings: ["ONLY_ACTIVE_ARCH": "YES"]),
-            .release(name: "Release"),
-        ]
-    ),
+    settings: .settings(base: ["COMPILATION_CACHE_ENABLE_CACHING": "YES"]),
     targets: [
         // The app is now three files: it starts up and picks a tab.
         .target(
@@ -86,12 +72,21 @@ let project = Project(
             ]),
             sources: ["RockyFeed/*.swift"],
             scripts: [
-                // Still no declared inputs or outputs, still shelling out to git.
-                // Not fixed, only relocated. It comes back to bite us later.
+                // Task 8. This phase used to run on every build, including no-op
+                // ones, because it told Xcode nothing about what it read or wrote
+                // — and then `basedOnDependencyAnalysis: false` told Xcode not to
+                // think about it either.
+                //
+                // Now it declares both, so Xcode skips it unless the commit
+                // actually moved. .git/HEAD is the honest input: it is the thing
+                // the script reads, so it is the thing that should re-trigger it.
                 .post(
                     path: "Scripts/stamp-build-info.sh",
                     name: "Stamp build info",
-                    basedOnDependencyAnalysis: false
+                    inputPaths: ["$(SRCROOT)/../.git/HEAD"],
+                    outputPaths: [
+                        "$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/BuildStamp.plist",
+                    ]
                 ),
             ],
             dependencies: [
@@ -101,8 +96,8 @@ let project = Project(
                 .target(name: "FeaturePlayer"),
                 .target(name: "FeatureProfile"),
                 .target(name: "FeatureSettings"),
-                .target(name: "CoreDesignSystem"),
-                .target(name: "CoreDomain"),
+                .target(name: "DesignSystem"),
+                .target(name: "Domain"),
             ]
         ),
 
@@ -120,10 +115,10 @@ let project = Project(
 
         // The only target that needs Alamofire. One file.
         .target(
-            name: "CoreNetworking",
+            name: "Networking",
             destinations: .iOS,
             product: .framework,
-            bundleId: "dev.tuist.rockyfeed.corenetworking",
+            bundleId: "dev.tuist.rockyfeed.networking",
             deploymentTargets: .iOS("17.0"),
             sources: ["\(coreRoot)/Networking/**"],
             dependencies: [.external(name: "Alamofire")]
@@ -134,14 +129,14 @@ let project = Project(
         // to waiting on an image library — the original problem, in miniature. So
         // it lives alone and pays for its own dependency.
         .target(
-            name: "CoreImages",
+            name: "Images",
             destinations: .iOS,
             product: .framework,
-            bundleId: "dev.tuist.rockyfeed.coreimages",
+            bundleId: "dev.tuist.rockyfeed.images",
             deploymentTargets: .iOS("17.0"),
             sources: ["\(coreRoot)/Images/**"],
             dependencies: [
-                .target(name: "CoreDesignSystem"),
+                .target(name: "DesignSystem"),
                 .external(name: "Kingfisher"),
             ]
         ),
@@ -151,10 +146,10 @@ let project = Project(
         // yours. Kingfisher and Alamofire then fail to build MobileCoreServices,
         // with an error mentioning neither your module nor your code.
         .target(
-            name: "CoreDomain",
+            name: "Domain",
             destinations: .iOS,
             product: .framework,
-            bundleId: "dev.tuist.rockyfeed.coredomain",
+            bundleId: "dev.tuist.rockyfeed.domain",
             deploymentTargets: .iOS("17.0"),
             sources: [
                 "\(coreRoot)/Session/**",
@@ -164,8 +159,8 @@ let project = Project(
                 "\(coreRoot)/Services/**",
             ],
             dependencies: [
-                .target(name: "CoreModels"),
-                .target(name: "CoreNetworking"),
+                .target(name: "Models"),
+                .target(name: "Networking"),
             ]
         ),
 
@@ -174,10 +169,10 @@ let project = Project(
         // Kingfisher rather than behind them.
 
         .target(
-            name: "CoreModels",
+            name: "Models",
             destinations: .iOS,
             product: .framework,
-            bundleId: "dev.tuist.rockyfeed.coremodels",
+            bundleId: "dev.tuist.rockyfeed.models",
             deploymentTargets: .iOS("17.0"),
             sources: [
                 "\(coreRoot)/Models/**",
@@ -188,10 +183,10 @@ let project = Project(
         ),
 
         .target(
-            name: "CoreDesignSystem",
+            name: "DesignSystem",
             destinations: .iOS,
             product: .framework,
-            bundleId: "dev.tuist.rockyfeed.coredesignsystem",
+            bundleId: "dev.tuist.rockyfeed.designsystem",
             deploymentTargets: .iOS("17.0"),
             sources: [
                 "\(coreRoot)/DesignSystem/**",
@@ -208,9 +203,9 @@ let project = Project(
             sources: ["RockyFeedTests/**"],
             dependencies: [
                 .target(name: "RockyFeed"),
-                .target(name: "CoreImages"),
-                .target(name: "CoreModels"),
-                .target(name: "CoreDomain"),
+                .target(name: "Images"),
+                .target(name: "Models"),
+                .target(name: "Domain"),
             ]
         ),
     ]

@@ -1,6 +1,6 @@
-import CoreDesignSystem
-import CoreDomain
-import CoreModels
+import DesignSystem
+import Domain
+import Models
 import SwiftUI
 
 struct LoginHelp: View {

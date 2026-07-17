@@ -1,4 +1,4 @@
-import CoreModels
+import Models
 import Foundation
 import Observation
 

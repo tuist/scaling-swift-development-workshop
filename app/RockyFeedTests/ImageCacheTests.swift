@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-import CoreImages
+import Images
 
 // This suite used to contain the kind of test that quietly costs teams days:
 //

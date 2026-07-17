@@ -1,5 +1,5 @@
-import CoreDesignSystem
-import CoreDomain
+import DesignSystem
+import Domain
 import FeatureFeed
 import FeatureLogin
 import FeaturePlayer
