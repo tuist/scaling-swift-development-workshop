@@ -1,3 +1,4 @@
+import { fromRoot } from "../paths.js";
 import { brand } from "../theme.js";
 import { shell } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
@@ -109,7 +110,7 @@ const validate = async (): Promise<ValidationResult> => {
 
   let workflow = "";
   try {
-    workflow = await fs.readFile(WORKFLOW, "utf8");
+    workflow = await fs.readFile(fromRoot(WORKFLOW), "utf8");
   } catch {
     /* handled below */
   }

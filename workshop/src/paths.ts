@@ -6,6 +6,17 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 /** Repository root (the directory holding mise.toml). */
 export const repoRoot = path.resolve(here, "..", "..");
 
+/**
+ * Resolve a repo-root-relative path.
+ *
+ * The runner's working directory is `workshop/`, not the repo root, so a bare
+ * "app/Project.swift" in a validator silently resolves to "workshop/app/..." and
+ * finds nothing — which reads as "you haven't done the task" no matter what the
+ * participant did. Validators show the relative path to humans and read through
+ * this.
+ */
+export const fromRoot = (relative: string): string => path.join(repoRoot, relative);
+
 export const paths = {
   repoRoot,
   /** The sample project we spend the workshop fixing. */
