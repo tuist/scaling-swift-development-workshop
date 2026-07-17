@@ -1,4 +1,5 @@
 # === Xcode / SwiftPM ===
+app/Derived/
 # NOTE: RockyFeed's .xcodeproj IS committed on purpose — that's part of the
 # "before" state. Feeling the pain of a checked-in Xcode project (merge
 # conflicts, churn) is one of the things this workshop is about.
