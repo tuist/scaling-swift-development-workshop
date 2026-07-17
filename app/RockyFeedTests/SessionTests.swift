@@ -1,9 +1,9 @@
 import Foundation
 import Testing
 
-import CoreDomain
-import CoreImages
-import CoreModels
+import Domain
+import Images
+import Models
 
 @Suite("Session")
 @MainActor

@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "DD9FAE8AB7FD502E819063C5"
-               BuildableName = "CoreNetworking.framework"
-               BlueprintName = "CoreNetworking"
+               BuildableName = "Networking.framework"
+               BlueprintName = "Networking"
                ReferencedContainer = "container:RockyFeed.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -45,8 +45,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DD9FAE8AB7FD502E819063C5"
-            BuildableName = "CoreNetworking.framework"
-            BlueprintName = "CoreNetworking"
+            BuildableName = "Networking.framework"
+            BlueprintName = "Networking"
             ReferencedContainer = "container:RockyFeed.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -61,8 +61,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DD9FAE8AB7FD502E819063C5"
-            BuildableName = "CoreNetworking.framework"
-            BlueprintName = "CoreNetworking"
+            BuildableName = "Networking.framework"
+            BlueprintName = "Networking"
             ReferencedContainer = "container:RockyFeed.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

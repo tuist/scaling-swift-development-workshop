@@ -1,7 +1,7 @@
-import CoreDesignSystem
-import CoreDomain
-import CoreImages
-import CoreModels
+import DesignSystem
+import Domain
+import Images
+import Models
 import SwiftUI
 
 public struct PlayerView: View {
