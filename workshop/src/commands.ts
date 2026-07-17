@@ -114,6 +114,18 @@ export const coldCacheBuild = (label: string, runs = 1): string =>
   --export-json ${exportPath(label)} \\
   "$BUILD"`;
 
+/** Warm the module cache: build every cacheable target, store it as an xcframework. */
+export const tuistCache = `cd app && tuist cache && cd ..`;
+
+/**
+ * Generate with the app focused.
+ *
+ * Naming a target means "keep this one as source, bring everything else in as a
+ * prebuilt binary". That is the whole point of a module cache, and it is only
+ * possible because task 4 gave the project modules to swap.
+ */
+export const tuistGenerateFocused = `cd app && tuist generate RockyFeed --no-open && cd ..`;
+
 export const labels = {
   baselineClean: "baseline-clean-build",
   baselineIncremental: "baseline-incremental",
@@ -122,5 +134,6 @@ export const labels = {
   splitClean: "split-clean-build",
   splitSerial: "split-serial-build",
   cachedClean: "cached-clean-build",
+  moduleCacheClean: "module-cache-clean-build",
   coldCacheClean: "cold-cache-clean-build",
 } as const;

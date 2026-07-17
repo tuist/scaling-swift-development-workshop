@@ -162,10 +162,37 @@ ${brand.bold("And now the part that should annoy you.")}
   ${brand.dim("They do not know the network exists. They wait for it anyway.")}
 
 They wait because Core is ${brand.bold("one module")}, and a module is the unit the build system
-schedules. One import, in one file, holds sixty unrelated files hostage.
+schedules.
 
-${brand.dim("Nothing about this is fixable by measuring harder, or by buying an M5. The graph")}
-${brand.dim("is the wrong shape. Next: we change the shape.")}`;
+${brand.bold("But hold on. Does that actually explain your number?")}
+
+It is the obvious story, and it is ${brand.bold("wrong")}, and finding out why is worth more than
+being told the right answer.
+
+Xcode already compiles the files ${brand.bold("inside")} a target in parallel. Core's 82 files were
+never a queue. Neither were the app's 90. So the chain above costs you the
+${brand.bold("handoffs")} — three of them — not the compiling, and three handoffs do not explain a
+gap this size.
+
+${brand.dim("We know it is wrong because we tried it. Splitting Core into twelve modules")}
+${brand.dim("later in this workshop moves the speedup from 2.96x to 2.93x — that is, not at")}
+${brand.dim("all — and makes the clean build 53% slower. If the graph were the ceiling, that")}
+${brand.dim("would have fixed it. It did not.")}
+
+${brand.bold("So what is the ceiling?")}
+Swift compilation itself. Type-checking, module emission, linking — work that does
+not divide neatly across ${cores} cores no matter how you arrange your project. You are
+getting ${brand.bold("about a quarter")} of this machine and there is no arrangement of targets
+that gets you the rest.
+
+${brand.bold("Which leaves you with the useful conclusion:")}
+
+  ${brand.dim("·")} A faster laptop buys you a little. Not a lot.
+  ${brand.dim("·")} Rearranging your modules buys you ${brand.bold("nothing")} here. We will prove that.
+  ${brand.dim("·")} The only way out is to ${brand.bold("not do the work")} — to reuse it instead.
+
+${brand.dim("That is the whole rest of the day. Everything from here is about doing less,")}
+${brand.dim("not about doing it faster.")}`;
 };
 
 export const task02: WorkshopTask = {
@@ -173,7 +200,7 @@ export const task02: WorkshopTask = {
   slug: "your-cores-are-idle",
   stage: "Stage 03 · The build",
   title: "Your cores are idle",
-  summary: "Find out how little of your machine the build actually uses.",
+  summary: "Find out how little of your machine you get, and why more cores will not help.",
   brief,
   reveals: [
     {

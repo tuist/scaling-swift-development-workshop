@@ -3,6 +3,7 @@ import { task02 } from "./02-your-cores-are-idle.js";
 import { task03 } from "./03-generate-it.js";
 import { task04 } from "./04-split-the-god-module.js";
 import { task05 } from "./05-reuse-dont-recompute.js";
+import { task06 } from "./06-cache-whole-modules.js";
 import type { WorkshopTask } from "./types.js";
 
 /**
@@ -22,7 +23,7 @@ import type { WorkshopTask } from "./types.js";
  * around a graph problem rather than fix it, and the module cache in task 6 only
  * pays off once the graph is worth caching — which is what task 4 makes true.
  */
-export const tasks: WorkshopTask[] = [task01, task02, task03, task04, task05];
+export const tasks: WorkshopTask[] = [task01, task02, task03, task04, task05, task06];
 
 export const findTask = (id: number): WorkshopTask | undefined =>
   tasks.find((task) => task.id === id);

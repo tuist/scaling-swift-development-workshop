@@ -25,10 +25,18 @@ Then measure both numbers again — the clean build and the serial one:
   ${brand.accent(labels.splitClean)}${brand.dim(".json")}
   ${brand.accent(labels.splitSerial)}${brand.dim(".json")}
 
-${brand.bold("The target to beat")}
-${brand.dim("2.8× out of")} ${brand.accent(`${cores} cores`)}${brand.dim(".")} If the graph was really the thing holding your
-machine back, that ratio moves. If it doesn't, your new modules are still queued
-behind each other and you have drawn a diagram rather than fixed a build.
+${brand.bold("Fair warning: this will make your build slower.")}
+Not a little. About half again. Measure it anyway — the number is the lesson, and
+a task that only ever shows you wins is a sales pitch, not a workshop.
+
+${brand.dim("Task 2 said the cores were idle because of the graph. Task 2 was wrong, and this")}
+${brand.dim("is the task that proves it: the speedup will not move, because Xcode was already")}
+${brand.dim("compiling the files inside each target in parallel. There was never a queue.")}
+
+${brand.bold("So why are we doing it?")}
+Because you are not buying speed here. You are buying ${brand.bold("granularity")}, and you spend
+it in Task 6. If you want the argument before the evidence, skip ahead — but it
+lands better if you have felt the regression first.
 
 ${brand.bold("Do this bit yourself before taking the hint.")} Open Core, look at what is actually
 in it, and sketch the layers on paper. There is one file in there that will fight
@@ -214,20 +222,20 @@ const didItWork = async (): Promise<string> => {
   ];
 
   const verdict =
-    after > before + 0.3
-      ? `${brand.success("The cores woke up.")} Same machine, same ${cores} cores, same source code. You went\n` +
-        `from ${brand.bold(`${before.toFixed(1)}×`)} to ${brand.bold(`${after.toFixed(1)}×`)}, and the clean build is ` +
-        `${brand.bold(formatDuration(Math.abs(saved)))} ${saved > 0 ? "faster" : "slower"}.\n\n` +
-        `Nothing compiles quicker than it did. There is exactly as much code as there\n` +
-        `was this morning. The only thing that changed is ${brand.bold("what is allowed to happen at")}\n` +
-        `${brand.bold("the same time")} — and that was worth more than the hardware upgrade you were\n` +
-        `about to ask for.`
-      : `${brand.warn("The ratio barely moved.")} Worth finding out why before you go further:\n\n` +
-        `  ${brand.dim("·")} Did something still depend on Alamofire or Kingfisher that shouldn't?\n` +
-        `  ${brand.dim("·")} Did CoreDesignSystem end up needing Kingfisher because of RemoteImage?\n` +
-        `  ${brand.dim("·")} Is there an umbrella target that re-exports everything?\n\n` +
-        `  ${brand.dim("`tuist graph` draws you the picture. Look for the module that everything")}\n` +
-        `  ${brand.dim("still points at.")}`;
+    after < before - 0.3
+      ? `${brand.warn("The speedup went down, and the build got slower.")} That is the expected result,\n` +
+        `and it is worth sitting with for a moment.\n\n` +
+        `Nothing here compiles more slowly than it did. There is exactly as much code\n` +
+        `as this morning. What you added is ${brand.bold("boundaries")}: twelve modules to link, sign\n` +
+        `and embed where there were two — and no parallelism in return, because Xcode\n` +
+        `already compiled the files inside each target at the same time.\n\n` +
+        `${brand.bold("Task 2 told you the graph was the ceiling. Task 2 was wrong, and this is how")}\n` +
+        `${brand.bold("you know.")} If the shape had been the problem, this would have fixed it.\n\n` +
+        `${brand.dim("Keep the number. Task 6 is where you find out what you actually bought.")}`
+      : `${brand.bold("Your numbers moved differently to ours.")} Ours got ~50% slower here, and the\n` +
+        `speedup did not budge.\n\n` +
+        `Worth a look either way: \`tuist graph\` draws the picture. But do not expect\n` +
+        `this task to be the win — it is not, and Task 6 is where the argument lands.`;
 
   return `${lines.join("\n")}\n\n${verdict}\n\n${brand.dim(
     "This is the shape the talk asks for: no arrows inside a layer, and nothing\nwaiting on work it never needed.",
@@ -239,7 +247,7 @@ export const task04: WorkshopTask = {
   slug: "split-the-god-module",
   stage: "Stage 03 · The build",
   title: "Split the god module",
-  summary: "Change the graph so nothing waits for work it never uses.",
+  summary: "Make the build slower on purpose. Collect in Task 6.",
   brief,
   reveals: [
     {
