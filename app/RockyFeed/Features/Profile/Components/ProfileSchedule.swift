@@ -1,4 +1,6 @@
-import Core
+import DesignSystem
+import Domain
+import Models
 import SwiftUI
 
 struct ProfileSchedule: View {

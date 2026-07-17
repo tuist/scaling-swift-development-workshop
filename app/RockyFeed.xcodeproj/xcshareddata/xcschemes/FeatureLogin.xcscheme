@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1430"
-   version = "1.7">
+   LastUpgradeVersion = "1010"
+   version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -15,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "BC8DB4A7B3ACFF9D47FAEFA2"
-               BuildableName = "RockyFeed.app"
-               BlueprintName = "RockyFeed"
+               BlueprintIdentifier = "EA97BB816A6263479DA4DFDC"
+               BuildableName = "FeatureLogin.framework"
+               BlueprintName = "FeatureLogin"
                ReferencedContainer = "container:RockyFeed.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,31 +27,9 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      onlyGenerateCoverageForSpecifiedTargets = "NO">
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BC8DB4A7B3ACFF9D47FAEFA2"
-            BuildableName = "RockyFeed.app"
-            BlueprintName = "RockyFeed"
-            ReferencedContainer = "container:RockyFeed.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
+      disableMainThreadChecker = "YES">
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8472909E375B8F8AF6E25B5E"
-               BuildableName = "RockyFeedTests.xctest"
-               BlueprintName = "RockyFeedTests"
-               ReferencedContainer = "container:RockyFeed.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -64,18 +41,15 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BC8DB4A7B3ACFF9D47FAEFA2"
-            BuildableName = "RockyFeed.app"
-            BlueprintName = "RockyFeed"
+            BlueprintIdentifier = "EA97BB816A6263479DA4DFDC"
+            BuildableName = "FeatureLogin.framework"
+            BlueprintName = "FeatureLogin"
             ReferencedContainer = "container:RockyFeed.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
+      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -83,16 +57,15 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "BC8DB4A7B3ACFF9D47FAEFA2"
-            BuildableName = "RockyFeed.app"
-            BlueprintName = "RockyFeed"
+            BlueprintIdentifier = "EA97BB816A6263479DA4DFDC"
+            BuildableName = "FeatureLogin.framework"
+            BlueprintName = "FeatureLogin"
             ReferencedContainer = "container:RockyFeed.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

@@ -1,7 +1,9 @@
 import Foundation
 import Testing
 
-import Core
+import Domain
+import Images
+import Models
 
 // ⚠️ This suite contains the kind of test that quietly costs teams entire days.
 //
