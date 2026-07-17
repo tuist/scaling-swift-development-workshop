@@ -1,7 +1,9 @@
-import Core
+import CoreDesignSystem
+import CoreDomain
+import CoreModels
 import SwiftUI
 
-struct LoginView: View {
+public struct LoginView: View {
     @Environment(UserSession.self) private var session
     @State private var name: String = ""
     @State private var email: String = ""
@@ -11,7 +13,9 @@ struct LoginView: View {
             && email.contains("@")
     }
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
             Spacer()
 

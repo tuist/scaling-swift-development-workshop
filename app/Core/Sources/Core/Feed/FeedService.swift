@@ -1,3 +1,5 @@
+import CoreModels
+import CoreNetworking
 import Foundation
 
 public protocol FeedServiceProtocol: Sendable {

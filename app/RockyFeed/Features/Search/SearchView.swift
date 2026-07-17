@@ -1,13 +1,17 @@
-import Core
+import CoreDesignSystem
+import CoreDomain
+import CoreModels
 import SwiftUI
 
-struct SearchView: View {
+public struct SearchView: View {
     @State private var query: String = ""
     @State private var results: [Talk] = []
 
     private let service: any FeedServiceProtocol = FeedService()
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationStack {
             List(results) { talk in
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {

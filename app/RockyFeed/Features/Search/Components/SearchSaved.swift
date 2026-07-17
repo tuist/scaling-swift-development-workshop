@@ -1,4 +1,6 @@
-import Core
+import CoreDesignSystem
+import CoreDomain
+import CoreModels
 import SwiftUI
 
 struct SearchSaved: View {

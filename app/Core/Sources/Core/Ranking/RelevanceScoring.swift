@@ -1,3 +1,4 @@
+import CoreModels
 import Foundation
 
 // Ranking heuristics for the feed.

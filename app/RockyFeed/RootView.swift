@@ -1,4 +1,11 @@
-import Core
+import CoreDesignSystem
+import CoreDomain
+import FeatureFeed
+import FeatureLogin
+import FeaturePlayer
+import FeatureProfile
+import FeatureSearch
+import FeatureSettings
 import SwiftUI
 
 // Every feature is a folder in this one app target. There are no module
