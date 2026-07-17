@@ -86,12 +86,21 @@ let project = Project(
             ]),
             sources: ["RockyFeed/*.swift"],
             scripts: [
-                // Still no declared inputs or outputs, still shelling out to git.
-                // Not fixed, only relocated. It comes back to bite us later.
+                // Task 8. This phase used to run on every build, including no-op
+                // ones, because it told Xcode nothing about what it read or wrote
+                // — and then `basedOnDependencyAnalysis: false` told Xcode not to
+                // think about it either.
+                //
+                // Now it declares both, so Xcode skips it unless the commit
+                // actually moved. .git/HEAD is the honest input: it is the thing
+                // the script reads, so it is the thing that should re-trigger it.
                 .post(
                     path: "Scripts/stamp-build-info.sh",
                     name: "Stamp build info",
-                    basedOnDependencyAnalysis: false
+                    inputPaths: ["$(SRCROOT)/../.git/HEAD"],
+                    outputPaths: [
+                        "$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/BuildStamp.plist",
+                    ]
                 ),
             ],
             dependencies: [
