@@ -7,6 +7,9 @@ import { task06 } from "./06-cache-whole-modules.js";
 import { task07 } from "./07-test-what-changed.js";
 import { task08 } from "./08-the-build-that-lies.js";
 import { task09 } from "./09-make-ci-pay.js";
+import { task10 } from "./10-nobody-else-can-see-it.js";
+import { task11 } from "./11-a-cache-of-one.js";
+import { task12 } from "./12-ask-it-what-changed.js";
 import type { WorkshopTask } from "./types.js";
 
 /**
@@ -24,6 +27,9 @@ import type { WorkshopTask } from "./types.js";
  *   7. Test only what changed   the same contract, in the test suite
  *   8. The build that lies      a phase that breaks 'same inputs, same output'
  *   9. Make CI pay for it       none of the above is true on an empty runner
+ *  10. Nobody else can see it   every number so far lives on one laptop
+ *  11. A cache of one           3.3s that only you have; share it, and prove it
+ *  12. Ask it what changed      make noticing automatic, because nobody clicks
  *
  * Caching comes *after* modularisation on purpose, and the measurements are why.
  * Splitting the monolith makes the clean build 53% slower and buys no parallelism
@@ -31,12 +37,23 @@ import type { WorkshopTask } from "./types.js";
  * not a speed optimisation. They are what makes a build *cacheable*, which task 6
  * then proves: 8.1s for the cached monolith against 3.3s for the cached split.
  *
+ * Tasks 10 to 12 are where the day stops being about one laptop. Every measurement
+ * up to here was taken by hand, once, by one person — which is exactly the habit
+ * that let the build get slow in the first place. The server half makes the
+ * numbers keep arriving without anyone remembering to take them, and it is where
+ * task 4's deliberate regression finally pays for the whole team rather than just
+ * for you: a monolith is one hash and one cache entry, so a shared cache of it is
+ * a shared cache of nothing.
+ *
  * Tasks 7 and 8 are the same sentence again in two other places. Skipping a test
  * assumes its result follows from its inputs; a flaky test breaks that. Caching a
  * build assumes the same; a phase that stamps a clock breaks that. Task 9 is where
  * all of it either pays off or quietly doesn't.
  */
-export const tasks: WorkshopTask[] = [task01, task02, task03, task04, task05, task06, task07, task08, task09];
+export const tasks: WorkshopTask[] = [
+  task01, task02, task03, task04, task05, task06,
+  task07, task08, task09, task10, task11, task12,
+];
 
 export const findTask = (id: number): WorkshopTask | undefined =>
   tasks.find((task) => task.id === id);

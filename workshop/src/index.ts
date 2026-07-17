@@ -86,7 +86,14 @@ const showTask = async (task: WorkshopTask): Promise<void> => {
         hint: reveal.hint ?? "Show more",
       })),
       { value: "brief", label: "Show the brief again", hint: "Re-read the task" },
-      { value: "stuck", label: "I'm stuck", hint: `Jump to ${task.solutionBranch}` },
+      // Tasks whose answer is a measurement or an account handle have no branch to
+      // check out, and say so in stuckNote. Promising one in the menu would send
+      // people looking for a ref that was never pushed.
+      {
+        value: "stuck",
+        label: "I'm stuck",
+        hint: task.stuckNote ? "Options when it won't go" : `Jump to ${task.solutionBranch}`,
+      },
       { value: "back", label: "Back to the task list", hint: "Pick another task" },
     ];
 

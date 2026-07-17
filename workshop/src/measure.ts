@@ -113,3 +113,47 @@ export const compilationCacheBytes = async (): Promise<number> => {
   const kb = Number.parseInt(result.stdout.trim().split(/\s+/)[0] ?? "0", 10);
   return Number.isFinite(kb) ? kb * 1024 : 0;
 };
+
+/**
+ * Tuist server probes.
+ *
+ * All read-only, and none of them print the cache token. `tuist cache config`
+ * dumps a live JWT to stdout with read/write grants on every project you can
+ * reach — we ask it whether it works and throw the answer away.
+ */
+
+/** The account handle you're logged in as, or null if you aren't. */
+export const tuistWhoami = async (): Promise<string | null> => {
+  const result = await run("tuist", ["auth", "whoami"], { cwd: paths.app });
+  if (!result.ok) return null;
+  const handle = result.stdout.trim().split("\n").pop()?.trim();
+  return handle && !handle.includes("Error") ? handle : null;
+};
+
+/** The fullHandle this checkout is pointed at, read out of Tuist.swift. */
+export const tuistFullHandle = async (): Promise<string | null> => {
+  const result = await run("grep", ["-oE", 'fullHandle: *"[^"]+"', paths.tuistManifest]);
+  if (!result.ok) return null;
+  return result.stdout.match(/"([^"]+)"/)?.[1] ?? null;
+};
+
+/** Projects visible to the logged-in account. */
+export const tuistProjects = async (): Promise<string[]> => {
+  const result = await run("tuist", ["project", "list"], { cwd: paths.app });
+  if (!result.ok) return [];
+  return result.stdout
+    .split("\n")
+    .map((line) => line.replace(/^\s*[•*-]\s*/, "").trim())
+    .filter((line) => /^[\w-]+\/[\w-]+$/.test(line));
+};
+
+/**
+ * Whether the remote cache is reachable for this project.
+ *
+ * Deliberately returns a boolean and never the token `tuist cache config`
+ * prints alongside it.
+ */
+export const remoteCacheReachable = async (): Promise<boolean> => {
+  const result = await run("tuist", ["cache", "config"], { cwd: paths.app });
+  return result.ok && /URL:\s*https:\/\//.test(result.stdout);
+};
