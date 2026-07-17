@@ -1,7 +1,10 @@
-import Core
+import DesignSystem
+import Domain
+import Images
+import Models
 import SwiftUI
 
-struct ProfileView: View {
+public struct ProfileView: View {
     @Environment(UserSession.self) private var session
 
     private var bookmarkedTalks: [Talk] {
@@ -9,7 +12,9 @@ struct ProfileView: View {
         return TalkFixtures.talks.filter { ids.contains($0.id) }
     }
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationStack {
             List {
                 Section {
