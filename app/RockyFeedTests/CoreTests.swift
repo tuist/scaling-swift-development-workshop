@@ -1,7 +1,9 @@
 import Foundation
 import Testing
 
-import Core
+import CoreDomain
+import CoreImages
+import CoreModels
 
 // One test target for the entire app. There is no way to run "just the tests for
 // the thing I changed" — the target is all-or-nothing, so every pull request pays

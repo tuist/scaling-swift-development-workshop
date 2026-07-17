@@ -1,14 +1,18 @@
-import Core
+import CoreDesignSystem
+import CoreDomain
+import CoreModels
 import SwiftUI
 
-struct FeedView: View {
+public struct FeedView: View {
     @Environment(UserSession.self) private var session
     @State private var items: [FeedItem] = []
     @State private var isLoading = true
 
     private let service: any FeedServiceProtocol = FeedService()
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationStack {
             Group {
                 if isLoading {
