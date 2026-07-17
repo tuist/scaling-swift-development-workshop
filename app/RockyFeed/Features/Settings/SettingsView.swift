@@ -1,12 +1,16 @@
-import Core
+import CoreDesignSystem
+import CoreDomain
+import CoreModels
 import SwiftUI
 
-struct SettingsView: View {
+public struct SettingsView: View {
     @Environment(UserSession.self) private var session
     @State private var prefersReducedMotion = false
     @State private var notificationsEnabled = true
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationStack {
             Form {
                 Section("Appearance") {
