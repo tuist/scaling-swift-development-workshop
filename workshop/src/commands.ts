@@ -126,6 +126,27 @@ export const tuistCache = `cd app && tuist cache && cd ..`;
  */
 export const tuistGenerateFocused = `cd app && tuist generate RockyFeed --no-open && cd ..`;
 
+/**
+ * Run the whole test suite, every test, every time. The status quo.
+ *
+ * Points at the workspace Tuist generates, so it is the same suite either way.
+ */
+export const testEverything = (label: string, runs = 1): string =>
+  `hyperfine --runs ${runs} \\
+  --export-json ${exportPath(label)} \\
+  "xcodebuild test \\
+    -workspace ${workspace} \\
+    -scheme RockyFeed-Workspace \\
+    -destination 'platform=iOS Simulator,name=iPhone 17e' \\
+    -derivedDataPath ${derivedData} \\
+    -quiet"`;
+
+/**
+ * Tuist's test runner: hashes each test target the way task 6 hashed each build
+ * target, and skips the ones whose inputs have not moved.
+ */
+export const testSelective = `cd app && tuist test && cd ..`;
+
 export const labels = {
   baselineClean: "baseline-clean-build",
   baselineIncremental: "baseline-incremental",
@@ -136,4 +157,5 @@ export const labels = {
   cachedClean: "cached-clean-build",
   moduleCacheClean: "module-cache-clean-build",
   coldCacheClean: "cold-cache-clean-build",
+  testAll: "test-everything",
 } as const;
