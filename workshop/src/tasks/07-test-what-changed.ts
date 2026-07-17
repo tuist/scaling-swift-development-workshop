@@ -172,4 +172,12 @@ export const task07: WorkshopTask = {
   ],
   validate,
   solutionBranch: "solutions/07",
+  stuckNote:
+    `${brand.accent("solutions/07")} has the fixed test, and the interesting half of it is not\n` +
+    `the deleted assertion — it is the ${brand.dim("pending()")} function that had to exist before\n` +
+    `there was anything honest to assert.\n\n` +
+    `${brand.bold("One check will still fail after you check it out")}, and that is correct: timing\n` +
+    `the suite is a measurement of ${brand.bold("your")} machine, and a branch cannot carry someone\n` +
+    `else's stopwatch. Run step 1 yourself.\n\n` +
+    `${brand.dim("Same reason Task 1 has no solution branch at all.")}`,
 };
