@@ -1,6 +1,6 @@
 import { labels, testEverything, testSelective } from "../commands.js";
 import { readMeasurement } from "../measure.js";
-import { fromRoot } from "../paths.js";
+import { readCode } from "../source.js";
 import { brand, formatDuration } from "../theme.js";
 import { shell } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
@@ -98,14 +98,12 @@ const validate = async (): Promise<ValidationResult> => {
       : `Nothing readable at .workshop/measurements/${labels.testAll}.json yet.`,
   });
 
-  // Read the flaky test back rather than trusting a checkbox: the fix has to be
-  // in the file, and there is more than one honest way to write it.
-  let source = "";
-  try {
-    source = await (await import("node:fs/promises")).readFile(fromRoot(FLAKY), "utf8");
-  } catch {
-    /* handled below */
-  }
+  // Read the code back rather than trusting a checkbox: the fix has to be in the
+  // file, and there is more than one honest way to write it.
+  //
+  // Comments stripped, because a good fix explains itself by quoting what it
+  // replaced — our own does — and a validator that greps prose fails correct work.
+  const source = await readCode(FLAKY);
 
   const gone = source.length > 0 && !/Int\.random\(in: 40 \.\.\. 120\)/.test(source);
   checks.push({

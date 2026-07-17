@@ -1,4 +1,4 @@
-import { fromRoot } from "../paths.js";
+import { readCode } from "../source.js";
 import { brand } from "../theme.js";
 import { shell } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
@@ -97,18 +97,12 @@ cd app && tuist generate --no-open && cd ..
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
-  const fs = await import("node:fs/promises");
 
-  const read = async (path: string): Promise<string> => {
-    try {
-      return await fs.readFile(fromRoot(path), "utf8");
-    } catch {
-      return "";
-    }
-  };
-
-  const script = await read(SCRIPT);
-  const manifest = await read("app/Project.swift");
+  // Comments stripped: the solution's own manifest explains the fix by naming
+  // `basedOnDependencyAnalysis: false`, and a naive grep would fail it for saying
+  // so.
+  const script = await readCode(SCRIPT);
+  const manifest = await readCode("app/Project.swift");
 
   // The timestamp is the sin that breaks reproducibility, so check the source
   // rather than the symptom — two builds a second apart could match by luck.

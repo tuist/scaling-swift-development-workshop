@@ -1,4 +1,4 @@
-import { fromRoot } from "../paths.js";
+import { readRaw } from "../source.js";
 import { brand } from "../theme.js";
 import { shell } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
@@ -106,14 +106,10 @@ const commands = shell(`# There is nothing to run here, so nothing to paste. Thi
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
-  const fs = await import("node:fs/promises");
 
-  let workflow = "";
-  try {
-    workflow = await fs.readFile(fromRoot(WORKFLOW), "utf8");
-  } catch {
-    /* handled below */
-  }
+  // Raw, not stripped: YAML comments are `#`, and the Swift stripper would eat
+  // `https://` URLs here for no benefit.
+  const workflow = await readRaw(WORKFLOW);
 
   checks.push({
     label: "A workflow exists",
