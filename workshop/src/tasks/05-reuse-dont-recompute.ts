@@ -1,4 +1,4 @@
-import { buildEnvGenerated, cleanBuild, coldCacheBuild, labels } from "../commands.js";
+import { buildEnvGeneratedCached, cleanBuild, coldCacheBuild, labels } from "../commands.js";
 import { shell } from "../ui.js";
 import { buildSetting, compilationCacheBytes, readMeasurement } from "../measure.js";
 import { renderComparison } from "../report.js";
@@ -76,13 +76,16 @@ it reaches everything underneath; hang it on one target and you have cached the
 small half of the build.
 
 ${brand.bold("Measuring it")}
-Same ${brand.dim("$BUILD")} command as task 4, same clean-build shape — only the export path
-changes, so you're comparing like with like.
+Same clean-build shape as task 4, with ${brand.bold("one")} addition to the ${brand.dim("$BUILD")} command:
+${brand.accent("COMPILATION_CACHE_CAS_PATH=.workshop/CompilationCache.noindex")}. That points the
+cache at the workshop's own directory rather than Xcode's global one — so it
+touches none of your real caches, and so you can throw it away on purpose in a
+moment. It did nothing in the earlier tasks (the setting was off), which is why
+it wasn't there. Now it matters.
 
 ${brand.bold("For the cold number")}, you need a run where the cache is empty ${brand.bold("and")} the products
-are gone. The workshop keeps its cache at ${brand.accent(".workshop/CompilationCache.noindex")}
-instead of your global Xcode caches, precisely so you can throw it away without
-consequences.
+are gone — which is exactly why the cache lives under ${brand.accent(".workshop/")}: you can
+${brand.dim("rm -rf")} it without consequences. The commands do it for you.
 
 ${brand.dim("Watch what the first cached build does. It won't be what you expect, and that")}
 ${brand.dim("surprise is the lesson.")}`;
@@ -93,7 +96,7 @@ ${brand.dim("surprise is the lesson.")}`;
 const commands = shell(`# Run these from the repo root, one at a time, and watch each one.
 
 # If BUILD is no longer set in this shell:
-${buildEnvGenerated}
+${buildEnvGeneratedCached}
 
 # 1. Clean build with the cache warm.
 #    The --warmup run does double duty here: it fills the cache, so every

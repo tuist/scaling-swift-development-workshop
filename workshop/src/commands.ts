@@ -25,9 +25,24 @@ const measurements = rel(paths.measurementsDir);
 
 const exportPath = (label: string): string => `${measurements}/${label}.json`;
 
-const commonArgs = `-scheme ${scheme} \\
+const destAndDerived = `-scheme ${scheme} \\
   -destination '${destination}' \\
-  -derivedDataPath ${derivedData} \\
+  -derivedDataPath ${derivedData}`;
+
+const commonArgs = `${destAndDerived} \\
+  -quiet`;
+
+/**
+ * The same args plus COMPILATION_CACHE_CAS_PATH, which points the compilation
+ * cache at .workshop/ instead of Xcode's global location.
+ *
+ * Deliberately absent from the commands before task 5: it does nothing until
+ * COMPILATION_CACHE_ENABLE_CACHING is turned on (that is task 5), and a flag that
+ * does nothing but name a concept nobody has met yet is just noise in the first
+ * benchmark anyone runs. From task 5 on it earns its place — it is what keeps the
+ * workshop's cache out of the caches your real work depends on.
+ */
+const cachedArgs = `${destAndDerived} \\
   COMPILATION_CACHE_CAS_PATH=${cas} \\
   -quiet`;
 
@@ -56,6 +71,17 @@ export const buildEnv = `export BUILD="xcodebuild build \\
 export const buildEnvGenerated = `export BUILD="xcodebuild build \\
   -workspace ${workspace} \\
   ${commonArgs}"`;
+
+/**
+ * The build command from task 5 onward, once compilation caching is on.
+ *
+ * Identical to buildEnvGenerated but with the cache redirected into .workshop/.
+ * Introduced here rather than earlier because this is the task that enables the
+ * cache — before now the flag would have been inert (see cachedArgs).
+ */
+export const buildEnvGeneratedCached = `export BUILD="xcodebuild build \\
+  -workspace ${workspace} \\
+  ${cachedArgs}"`;
 
 /**
  * Resolve the packages once, before benchmarking anything.

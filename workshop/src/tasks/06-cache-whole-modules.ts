@@ -1,4 +1,4 @@
-import { buildEnvGenerated, cleanBuild, labels, tuistCache, tuistGenerateFocused } from "../commands.js";
+import { buildEnvGeneratedCached, cleanBuild, labels, tuistCache, tuistGenerateFocused } from "../commands.js";
 import { generatedSchemes, readMeasurement } from "../measure.js";
 import { renderComparison } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
@@ -93,7 +93,7 @@ ${tuistCache}
 ${tuistGenerateFocused}
 
 # 3. Same clean build as every other task.
-${buildEnvGenerated}
+${buildEnvGeneratedCached}
 
 ${cleanBuild(labels.moduleCacheClean)}
 
