@@ -51,3 +51,17 @@ NODE_BIN="$(mise which node)"
 export PATH="$(dirname "$NODE_BIN"):$PATH"
 npm install --no-fund --no-audit
 """
+
+# Facilitator-only. Regenerates the "Live run-of-show" section of FACILITATOR.md
+# from the task source, so the commands you read on the day match what the runner
+# shows attendees exactly. Attendees never run this.
+[tasks.cheatsheet]
+description = "Refresh the facilitator command cheat-sheet in FACILITATOR.md"
+dir = "{{ config_root }}/workshop"
+quiet = true
+run = """
+NODE_BIN="$(mise which node)"
+export PATH="$(dirname "$NODE_BIN"):$PATH"
+[ -d node_modules ] || npm install --silent --no-fund --no-audit
+exec "$NODE_BIN" ./node_modules/tsx/dist/cli.mjs scripts/cheatsheet.ts
+"""
