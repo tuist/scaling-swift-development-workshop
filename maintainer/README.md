@@ -2,6 +2,14 @@
 
 Not part of the workshop. Attendees never need anything in here.
 
+## `FACILITATOR.md` — the run-of-show
+
+If you're the one delivering the workshop, [FACILITATOR.md](FACILITATOR.md) is your
+script: the spine of the day, per-task beats and timings, reference numbers, and —
+under each task — the exact commands to type live and how to jump to each solved
+branch. Those command blocks are generated from the task source; refresh them with
+`mise run cheatsheet` after changing any task.
+
 ## `app/RockyFeed.xcodeproj` is hand-maintained
 
 It is the source of truth. There is no generator, and that is the point: the
