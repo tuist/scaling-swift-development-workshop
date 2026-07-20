@@ -412,30 +412,6 @@ let project = Project(
         .remote(url: "https://github.com/Alamofire/Alamofire", requirement: .upToNextMajor(from: "5.9.0")),
         .remote(url: "https://github.com/onevcat/Kingfisher", requirement: .upToNextMajor(from: "7.11.0")),
     ],
-    settings: .settings(
-        base: [
-            "SWIFT_VERSION": "5.0",
-            "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
-            "ENABLE_USER_SCRIPT_SANDBOXING": "NO",
-        ],
-        configurations: [
-            // Carried over from the hand-written project, which set it because
-            // that's what Xcode's template does: a debug build should compile for
-            // the machine you're on, not for every simulator architecture.
-            //
-            // A migration has to bring the settings across, not just the file
-            // list. Two projects that compile the same sources with different
-            // settings are not the same project, and any number you compare
-            // between them is meaningless.
-            //
-            // (It happens to be inert for the workshop's benchmarks, which use a
-            // *generic* simulator destination — with no active architecture to
-            // pick, Xcode builds ARCHS_STANDARD regardless. It matters the moment
-            // you build to a real simulator, which is every build you do in Xcode.)
-            .debug(name: "Debug", settings: ["ONLY_ACTIVE_ARCH": "YES"]),
-            .release(name: "Release"),
-        ]
-    ),
     targets: [
         .target(
             name: "RockyFeed",
@@ -652,17 +628,6 @@ let project = Project(
         .remote(url: "https://github.com/Alamofire/Alamofire", requirement: .upToNextMajor(from: "5.9.0")),
         .remote(url: "https://github.com/onevcat/Kingfisher", requirement: .upToNextMajor(from: "7.11.0")),
     ],
-    settings: .settings(
-        base: [
-            "SWIFT_VERSION": "5.0",
-            "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
-            "ENABLE_USER_SCRIPT_SANDBOXING": "NO",
-        ],
-        configurations: [
-            .debug(name: "Debug", settings: ["ONLY_ACTIVE_ARCH": "YES"]),
-            .release(name: "Release"),
-        ]
-    ),
     targets: [
         // The app is now three files: it starts up and picks a tab.
         .target(
@@ -1068,21 +1033,6 @@ func feature(_ name: String, needsImages: Bool = false) -> Target {
 
 let project = Project(
     name: "RockyFeed",
-    settings: .settings(
-        base: [
-            "SWIFT_VERSION": "5.0",
-            "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
-            "ENABLE_USER_SCRIPT_SANDBOXING": "NO",
-            // Task 5. Set on the project so it reaches the package targets too —
-            // Alamofire and Kingfisher are most of a clean build, and setting this
-            // on the app target alone would cache the small half.
-            "COMPILATION_CACHE_ENABLE_CACHING": "YES",
-        ],
-        configurations: [
-            .debug(name: "Debug", settings: ["ONLY_ACTIVE_ARCH": "YES"]),
-            .release(name: "Release"),
-        ]
-    ),
     targets: [
         // The app is now three files: it starts up and picks a tab.
         .target(
@@ -1713,6 +1663,12 @@ claude mcp add --transport http tuist https://tuist.dev/mcp
 - **Load matters.** A measurement taken on a busy laptop came back σ=33%; the same
   one on a quiet machine gave σ=0.5%. If someone's numbers are wild, ask what else
   is running.
+- **If Task 8's stamp phase can't read git** (commit shows `unknown`), check
+  `ENABLE_USER_SCRIPT_SANDBOXING`. `Project.swift` sets no build settings — it
+  relies on the default, which is `NO`, so the script can shell out to git. If a
+  toolchain or org xcconfig ever flips that default to `YES`, the sandbox blocks
+  the git call and Task 8's premise breaks. Fix: add `"ENABLE_USER_SCRIPT_SANDBOXING": "NO"`
+  to a `settings:` base in `Project.swift`.
 
 ---
 
