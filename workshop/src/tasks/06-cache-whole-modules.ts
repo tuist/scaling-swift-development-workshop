@@ -5,10 +5,11 @@ import { brand, formatDuration } from "../theme.js";
 import { shell } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
 
-const brief = `${brand.bold("Two tasks ago you made the build slower. Here is the bill coming due.")}
+const brief = `${brand.bold("Two tasks ago you split the god module. Here is where it pays off.")}
 
-Splitting Core cost you time: more targets, more frameworks to link and sign, and
-not one extra second of parallelism. You did it anyway, and this is why.
+The split sped up your inner loop and cost a little on the clean build — but the
+part that matters now is the one you couldn't measure yet: it made your project
+${brand.bold("cacheable")}. This is where you spend that.
 
 ${brand.bold("The other kind of cache")}
 Task 5's cache works one ${brand.bold("compile job")} at a time. This one works on whole
@@ -19,11 +20,18 @@ That only works if your project ${brand.bold("has")} modules. A monolith has one
 one giant one is the worst possible unit to cache — change any file in it and the
 whole thing misses.
 
+${brand.bold("First, a piece of unfinished business.")}
+Your dependencies came in as Xcode-native SPM in Task 3, and ${brand.dim("tuist cache")} cannot
+see those — Xcode builds them, Tuist never touches them. So before you cache
+anything, you move Alamofire and Kingfisher into Tuist's hands. This is the task
+${brand.accent("Tuist/Package.swift")} finally exists for.
+
 ${brand.bold("Your job")}
 
-  1. Warm the module cache
-  2. Generate with the app ${brand.bold("focused")} — everything else arrives as a binary
-  3. Measure the clean build → ${brand.accent(labels.moduleCacheClean)}${brand.dim(".json")}
+  1. Move the deps to ${brand.accent("Tuist/Package.swift")} + ${brand.dim(".external")} so they can be cached
+  2. Warm the module cache
+  3. Generate with the app ${brand.bold("focused")} — everything else arrives as a binary
+  4. Measure the clean build → ${brand.accent(labels.moduleCacheClean)}${brand.dim(".json")}
 
 ${brand.bold("Then answer the question the day has been building to.")}
 You have measured this project four ways now. Was splitting it worth it?
@@ -66,7 +74,16 @@ says granularity is the whole game.
 ${brand.dim("The local cache lives in ~/.cache/tuist. Point it at a server and the same")}
 ${brand.dim("hashes work for your whole team and your CI, which is where it earns its keep.")}`;
 
-const hint = `${brand.bold("Two commands")}
+const hint = `${brand.bold("First move the dependencies")}
+${brand.dim("tuist cache")} caches Tuist targets. Xcode-native SPM packages aren't Tuist targets,
+so they'd be left out and rebuilt every time. Two edits fix that:
+
+  ${brand.dim("·")} create ${brand.accent("app/Tuist/Package.swift")} — a plain SwiftPM manifest listing the two packages
+  ${brand.dim("·")} in ${brand.accent("Project.swift")}, swap ${brand.dim(".package(product: \"Alamofire\")")} for ${brand.dim(".external(name: \"Alamofire\")")}
+
+then ${brand.accent("tuist install")} to resolve them. Now they are Tuist's, and cacheable.
+
+${brand.bold("Then two commands")}
 
 ${brand.accent("tuist cache")} builds every cacheable target and stores it as an xcframework. First
 run is slow — it is filling the cache, same lesson as task 5.
@@ -84,15 +101,26 @@ ${brand.dim("from the cache. Count them.")}`;
 
 const commands = shell(`# Run from the repo root, one at a time.
 
-# 1. Warm the module cache. Slow the first time: it is building every module
+# 1. Move the dependencies into Tuist's hands so tuist cache can see them.
+#    Project.swift swaps .package(product:) for .external(name:), and a new
+#    Tuist/Package.swift lists the packages. Take both verbatim from the branch:
+mkdir -p app/Tuist
+git show solutions/06:app/Project.swift > app/Project.swift
+git show solutions/06:app/Tuist/Package.swift > app/Tuist/Package.swift
+printf 'app/Tuist/.build/\\n' >> .gitignore
+
+# 2. Resolve them, now that they are Tuist-managed.
+cd app && tuist install && cd ..
+
+# 3. Warm the module cache. Slow the first time: it is building every module
 #    once and storing it. You have seen this trade before.
 ${tuistCache}
 
-# 2. Generate with the app focused. Everything else arrives as a binary.
+# 4. Generate with the app focused. Everything else arrives as a binary.
 #    Read what it prints: those are the targets it is not going to build.
 ${tuistGenerateFocused}
 
-# 3. Same clean build as every other task.
+# 5. Same clean build as every other task.
 ${buildEnvGeneratedCached}
 
 ${cleanBuild(labels.moduleCacheClean)}

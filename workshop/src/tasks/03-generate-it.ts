@@ -33,12 +33,12 @@ generated on demand, gitignored, like a ${brand.dim(".o")} file. Nobody merges t
 
 ${brand.bold("Your job")}
 
-  1. Describe RockyFeed in ${brand.accent("Project.swift")} — same three targets, same monolithic Core
-  2. Move Alamofire and Kingfisher into ${brand.accent("Tuist/Package.swift")}
-  3. Generate the project, delete the checked-in one, gitignore it
-  4. Re-measure the clean build → ${brand.accent(labels.generatedClean)}${brand.dim(".json")}
+  1. Describe RockyFeed in ${brand.accent("Project.swift")} — same three targets, same monolithic
+     Core, with Alamofire and Kingfisher declared right there as SwiftPM packages
+  2. Generate the project, delete the checked-in one, gitignore it
+  3. Re-measure the clean build → ${brand.accent(labels.generatedClean)}${brand.dim(".json")}
 
-${brand.bold("Do not expect step 4 to be exciting.")} You are changing where the project is
+${brand.bold("Do not expect step 3 to be exciting.")} You are changing where the project is
 defined, not what it says, so the build has the same work in front of it. It may
 come out slightly quicker — Tuist integrates Alamofire and Kingfisher as ordinary
 Xcode targets rather than leaving Xcode to interpret a package graph at build time
@@ -67,10 +67,16 @@ Keep Core exactly as it is — one target, all 82 files, owning both dependencie
 Resist the urge to fix it here. That's the next task, and doing both at once means
 you won't know which one earned the number.
 
-${brand.bold("Third-party dependencies")}
-${brand.accent("app/Tuist/Package.swift")} is a normal SwiftPM manifest listing Alamofire and
-Kingfisher. ${brand.accent("tuist install")} resolves them. In your targets they become
-${brand.dim('.external(name: "Alamofire")')}.
+${brand.bold("Third-party dependencies go in Project.swift too")}
+Declare them once at the project level and reference the products from Core — this
+is Xcode's own SPM integration, written in Swift:
+
+  ${brand.dim("packages: [.remote(url: \"…/Alamofire\", requirement: .upToNextMajor(from: \"5.9.0\"))]")}
+  ${brand.dim("// on Core:  dependencies: [.package(product: \"Alamofire\"), .package(product: \"Kingfisher\")]")}
+
+Xcode resolves them at build time, so there is ${brand.bold("no")} ${brand.dim("tuist install")} step here. (You
+will move them to a Tuist-managed form in Task 6 — the module cache needs them to
+be Tuist's targets, not Xcode's. Not yet: one new idea per task.)
 
 ${brand.bold("Don't forget the build phase")}
 The "Stamp build info" script has to survive the migration — it's in ${brand.dim("scripts:")} on
@@ -88,51 +94,32 @@ which is the build system telling you to point at the workspace instead.`;
 
 const commands = shell(`# Run from the repo root, one at a time.
 
-# 1. Mark the Tuist root.
+# 1. Project.swift IS the task: it describes the whole project in Swift, with
+#    Alamofire and Kingfisher declared as SwiftPM packages right in the manifest.
+#    It is ~80 lines, so take it verbatim rather than typing it. Open it and read
+#    it — the packages: block and the .package(product:) references are the point.
+git show solutions/03:app/Project.swift > app/Project.swift
+
+# 2. Mark the Tuist root. One line.
 cat > app/Tuist.swift <<'SWIFT'
 import ProjectDescription
 
 let tuist = Tuist()
 SWIFT
 
-# 2. Third-party dependencies, for tuist install to resolve.
-mkdir -p app/Tuist
-cat > app/Tuist/Package.swift <<'SWIFT'
-// swift-tools-version: 6.0
-import PackageDescription
-
-let package = Package(
-    name: "RockyFeed",
-    dependencies: [
-        .package(url: "https://github.com/Alamofire/Alamofire", from: "5.9.0"),
-        .package(url: "https://github.com/onevcat/Kingfisher", from: "7.11.0"),
-    ]
-)
-SWIFT
-
-# 3. Write app/Project.swift.
-#    Not reproduced here, because copying 70 lines of manifest teaches nothing.
-#    Take it from the solution branch if you want it verbatim:
-#
-#      git show solutions/03:app/Project.swift > app/Project.swift
-#
-#    Three targets: RockyFeed (.app), Core (.framework, sources
-#    Core/Sources/Core/**, external Alamofire + Kingfisher), RockyFeedTests
-#    (.unitTests). Plus the post script at Scripts/stamp-build-info.sh.
-
-# 4. Core is a Tuist target now, not a SwiftPM package.
+# 3. Core stops being its own SwiftPM package — it is a Tuist target now.
 git rm --cached app/Core/Package.swift app/Core/Package.resolved
 rm -f app/Core/Package.swift app/Core/Package.resolved
 
-# 5. Resolve and generate.
-cd app && tuist install && tuist generate --no-open && cd ..
+# 4. Generate. No tuist install: the packages are Xcode-native SPM, resolved at
+#    build time. (tuist install arrives in Task 6, with the module cache.)
+cd app && tuist generate --no-open && cd ..
 
-# 6. The checked-in project becomes a build artefact. This is the moment the
-#    merge conflicts stop.
+# 5. The checked-in project becomes a build artefact. Merge conflicts stop here.
 git rm -r --cached app/RockyFeed.xcodeproj
-printf 'app/*.xcodeproj\\napp/*.xcworkspace\\napp/Derived/\\napp/Tuist/.build/\\n' >> .gitignore
+printf 'app/*.xcodeproj\\napp/*.xcworkspace\\napp/Derived/\\n' >> .gitignore
 
-# 7. Re-measure. Note the -workspace: see the hint.
+# 6. Re-measure. Note the -workspace (see the hint).
 ${buildEnvGenerated}
 
 ${cleanBuild(labels.generatedClean)}
