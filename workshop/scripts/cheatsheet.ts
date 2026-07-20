@@ -33,19 +33,19 @@ const showcase: Record<number, string[]> = {
   2: ["# No branch — a measurement. Run the -jobs 1 build live, then open the \"why\" reveal."],
   3: [
     "git checkout solutions/03",
-    "cd app && tuist install && tuist generate --no-open && open RockyFeed.xcworkspace",
+    "cd app && tuist generate --no-open && open RockyFeed.xcworkspace   # native SPM: no tuist install",
     "# Point at it: no .pbxproj in git, the workspace is generated from Project.swift.",
   ],
   4: [
     "git checkout solutions/04",
-    "cd app && tuist install && tuist generate --no-open",
+    "cd app && tuist generate --no-open   # native SPM: no tuist install",
     "tuist graph                 # the module graph, drawn — this is the payoff to SHOW",
-    "# Then open the \"verdict\" reveal on their own numbers: 22.8s split vs 14.9s monolith.",
+    "# Then open the \"what did it cost\" reveal: incremental faster, clean ~flat (noise at this scale).",
   ],
   5: [
     "git checkout solutions/05",
     "# Show the one line: COMPILATION_CACHE_ENABLE_CACHING in app/Project.swift's settings base.",
-    "cd app && tuist install && tuist generate --no-open",
+    "cd app && tuist generate --no-open   # native SPM: no tuist install",
     "# Then measure warm vs cold with the commands above.",
   ],
   6: [

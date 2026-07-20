@@ -383,51 +383,32 @@ beside the app in a **workspace**, so `-project` alone fails with
 ```sh
 # Run from the repo root, one at a time.
 
-# 1. Mark the Tuist root.
+# 1. Project.swift IS the task: it describes the whole project in Swift, with
+#    Alamofire and Kingfisher declared as SwiftPM packages right in the manifest.
+#    It is ~80 lines, so take it verbatim rather than typing it. Open it and read
+#    it — the packages: block and the .package(product:) references are the point.
+git show solutions/03:app/Project.swift > app/Project.swift
+
+# 2. Mark the Tuist root. One line.
 cat > app/Tuist.swift <<'SWIFT'
 import ProjectDescription
 
 let tuist = Tuist()
 SWIFT
 
-# 2. Third-party dependencies, for tuist install to resolve.
-mkdir -p app/Tuist
-cat > app/Tuist/Package.swift <<'SWIFT'
-// swift-tools-version: 6.0
-import PackageDescription
-
-let package = Package(
-    name: "RockyFeed",
-    dependencies: [
-        .package(url: "https://github.com/Alamofire/Alamofire", from: "5.9.0"),
-        .package(url: "https://github.com/onevcat/Kingfisher", from: "7.11.0"),
-    ]
-)
-SWIFT
-
-# 3. Write app/Project.swift.
-#    Not reproduced here, because copying 70 lines of manifest teaches nothing.
-#    Take it from the solution branch if you want it verbatim:
-#
-#      git show solutions/03:app/Project.swift > app/Project.swift
-#
-#    Three targets: RockyFeed (.app), Core (.framework, sources
-#    Core/Sources/Core/**, external Alamofire + Kingfisher), RockyFeedTests
-#    (.unitTests). Plus the post script at Scripts/stamp-build-info.sh.
-
-# 4. Core is a Tuist target now, not a SwiftPM package.
+# 3. Core stops being its own SwiftPM package — it is a Tuist target now.
 git rm --cached app/Core/Package.swift app/Core/Package.resolved
 rm -f app/Core/Package.swift app/Core/Package.resolved
 
-# 5. Resolve and generate.
-cd app && tuist install && tuist generate --no-open && cd ..
+# 4. Generate. No tuist install: the packages are Xcode-native SPM, resolved at
+#    build time. (tuist install arrives in Task 6, with the module cache.)
+cd app && tuist generate --no-open && cd ..
 
-# 6. The checked-in project becomes a build artefact. This is the moment the
-#    merge conflicts stop.
+# 5. The checked-in project becomes a build artefact. Merge conflicts stop here.
 git rm -r --cached app/RockyFeed.xcodeproj
-printf 'app/*.xcodeproj\napp/*.xcworkspace\napp/Derived/\napp/Tuist/.build/\n' >> .gitignore
+printf 'app/*.xcodeproj\napp/*.xcworkspace\napp/Derived/\n' >> .gitignore
 
-# 7. Re-measure. Note the -workspace: see the hint.
+# 6. Re-measure. Note the -workspace (see the hint).
 export BUILD="xcodebuild build \
   -workspace app/RockyFeed.xcworkspace \
   -scheme RockyFeed \
@@ -447,7 +428,7 @@ hyperfine --runs 3 --warmup 1 \
 
 ```sh
 git checkout solutions/03
-cd app && tuist install && tuist generate --no-open && open RockyFeed.xcworkspace
+cd app && tuist generate --no-open && open RockyFeed.xcworkspace   # native SPM: no tuist install
 # Point at it: no .pbxproj in git, the workspace is generated from Project.swift.
 ```
 
@@ -551,9 +532,9 @@ hyperfine --runs 3 --warmup 1 \
 
 ```sh
 git checkout solutions/04
-cd app && tuist install && tuist generate --no-open
+cd app && tuist generate --no-open   # native SPM: no tuist install
 tuist graph                 # the module graph, drawn — this is the payoff to SHOW
-# Then open the "verdict" reveal on their own numbers: 22.8s split vs 14.9s monolith.
+# Then open the "what did it cost" reveal: incremental faster, clean ~flat (noise at this scale).
 ```
 
 <!-- COMMANDS:4:END -->
@@ -609,15 +590,26 @@ until you regenerate it.
 ```sh
 # Run from the repo root, one at a time.
 
-# 1. Warm the module cache. Slow the first time: it is building every module
+# 1. Move the dependencies into Tuist's hands so tuist cache can see them.
+#    Project.swift swaps .package(product:) for .external(name:), and a new
+#    Tuist/Package.swift lists the packages. Take both verbatim from the branch:
+mkdir -p app/Tuist
+git show solutions/06:app/Project.swift > app/Project.swift
+git show solutions/06:app/Tuist/Package.swift > app/Tuist/Package.swift
+printf 'app/Tuist/.build/\n' >> .gitignore
+
+# 2. Resolve them, now that they are Tuist-managed.
+cd app && tuist install && cd ..
+
+# 3. Warm the module cache. Slow the first time: it is building every module
 #    once and storing it. You have seen this trade before.
 cd app && tuist cache && cd ..
 
-# 2. Generate with the app focused. Everything else arrives as a binary.
+# 4. Generate with the app focused. Everything else arrives as a binary.
 #    Read what it prints: those are the targets it is not going to build.
 cd app && tuist generate RockyFeed --no-open && cd ..
 
-# 3. Same clean build as every other task.
+# 5. Same clean build as every other task.
 export BUILD="xcodebuild build \
   -workspace app/RockyFeed.xcworkspace \
   -scheme RockyFeed \
@@ -1246,7 +1238,7 @@ hyperfine --runs 1 \
 ```sh
 git checkout solutions/05
 # Show the one line: COMPILATION_CACHE_ENABLE_CACHING in app/Project.swift's settings base.
-cd app && tuist install && tuist generate --no-open
+cd app && tuist generate --no-open   # native SPM: no tuist install
 # Then measure warm vs cold with the commands above.
 ```
 
