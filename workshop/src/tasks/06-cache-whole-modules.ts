@@ -99,18 +99,18 @@ you are comparing like with like.
 ${brand.dim("Watch what tuist prints when it generates. It lists the targets it is taking")}
 ${brand.dim("from the cache. Count them.")}`;
 
-const commands = shell(`# Run from the repo root, one at a time.
+const commands = shell(`# Run from app/, one at a time.
 
 # 1. Move the dependencies into Tuist's hands so tuist cache can see them.
 #    Project.swift swaps .package(product:) for .external(name:), and a new
 #    Tuist/Package.swift lists the packages. Take both verbatim from the branch:
-mkdir -p app/Tuist
-git show solutions/06:app/Project.swift > app/Project.swift
-git show solutions/06:app/Tuist/Package.swift > app/Tuist/Package.swift
-printf 'app/Tuist/.build/\\n' >> .gitignore
+mkdir -p Tuist
+git show solutions/06:app/Project.swift > Project.swift
+git show solutions/06:app/Tuist/Package.swift > Tuist/Package.swift
+printf 'app/Tuist/.build/\\n' >> ../.gitignore  # the repo-root ignore
 
 # 2. Resolve them, now that they are Tuist-managed.
-cd app && tuist install && cd ..
+tuist install
 
 # 3. Warm the module cache. Slow the first time: it is building every module
 #    once and storing it. You have seen this trade before.

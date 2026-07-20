@@ -50,7 +50,7 @@ yourself, in order:
 
 ${brand.dim("Then take the last reveal, which does the arithmetic with you.")}`;
 
-const commands = shell(`# Run from the repo root.
+const commands = shell(`# Run from app/.
 
 # If BUILD is no longer set in this shell:
 ${buildEnv}

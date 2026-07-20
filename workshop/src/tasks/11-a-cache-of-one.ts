@@ -60,9 +60,7 @@ under ${brand.dim(".workshop/")}) and Tuist's module cache from task 6 (per modu
 ${brand.dim("~/.cache/tuist")}). Task 10's handle makes the module cache shared. The compilation
 cache is still yours alone — see the last reveal for why that is harder.`;
 
-const commands = shell(`# Run from the repo root, one at a time.
-
-cd app
+const commands = shell(`# Run from app/, one at a time.
 
 # 1. Warm it. With a fullHandle set, this now pushes to the server too.
 #    Read the last line: it tells you hits, misses, and where they came from.
@@ -78,8 +76,6 @@ tuist cache
 # 4. And the build that follows is the one from task 6, on a machine that
 #    compiled none of it.
 tuist generate --no-open
-
-cd ..
 
 # Then: Validate my work, and So who is this actually for.`);
 

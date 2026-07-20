@@ -76,7 +76,7 @@ ${brand.dim("get on with your day.")}`;
 // ("command not found: #") — but one containing `isn't` reads as an unmatched
 // quote, drops the shell into a `quote>` continuation, and silently swallows the
 // commands underneath. Plain ASCII, no apostrophes.
-const commands = shell(`# Run these from the repo root, one at a time, and watch each one.
+const commands = shell(`# Run these from app/, one at a time, and watch each one.
 
 # Set the build command once. Every benchmark today reuses it, which is
 # what keeps the comparisons honest.

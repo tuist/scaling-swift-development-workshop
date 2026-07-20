@@ -66,7 +66,7 @@ assertion, or gate the work on an injected clock and assert against that.
 
 ${brand.dim("A test that measures the weather is not testing your code.")}`;
 
-const commands = shell(`# Run these from the repo root, one at a time.
+const commands = shell(`# Run these from app/, one at a time.
 
 # 1. The whole suite, every test, every time. This is CI today.
 ${testEverything(labels.testAll)}
@@ -78,7 +78,7 @@ ${testSelective}
 ${testSelective}
 
 # 3. Prove it notices real changes: touch a test, run again.
-touch ${FLAKY}
+touch ${FLAKY.replace("app/", "")}
 ${testSelective}
 
 # 4. Then open that file and decide whether you would let it be skipped.

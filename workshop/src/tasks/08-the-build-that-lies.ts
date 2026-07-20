@@ -64,23 +64,21 @@ thing that scheduled it. The commit is already an honest input; ${brand.dim("dat
 
 ${brand.dim("You cannot make a phase hermetic and keep a clock in it. Pick one.")}`;
 
-const commands = shell(`# Run from the repo root, one at a time.
+const commands = shell(`# Run from app/, one at a time.
 
 # 1. Build the same source twice, into two places.
-cd app
 xcodebuild build -workspace RockyFeed.xcworkspace -scheme RockyFeed \\
   -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/build-a -quiet
 xcodebuild build -workspace RockyFeed.xcworkspace -scheme RockyFeed \\
   -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/build-b -quiet
-cd ..
 
 # 2. Are they the same app?
 diff -r /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app \\
         /tmp/build-b/Build/Products/Debug-iphonesimulator/RockyFeed.app
 
 # 3. Look at what differs.
-diff /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildInfo.plist \\
-     /tmp/build-b/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildInfo.plist
+diff /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildStamp.plist \\
+     /tmp/build-b/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildStamp.plist
 
 # 4. Now open the culprit and fix it.
 #    - take the timestamp out
@@ -91,7 +89,7 @@ diff /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildInfo.p
 #    app/Project.swift
 
 # 5. Prove it: regenerate, build twice more, diff again. Silence is the pass.
-cd app && tuist generate --no-open && cd ..
+tuist generate --no-open
 
 # Then: Validate my work.`);
 

@@ -228,38 +228,38 @@ split (which is what they'll be sitting on by then, *not* Task 1's monolith):
 **Type this live** (they mirror you):
 
 ```sh
-# Run these from the repo root, one at a time, and watch each one.
+# Run these from app/, one at a time, and watch each one.
 
 # Set the build command once. Every benchmark today reuses it, which is
 # what keeps the comparisons honest.
 export BUILD="xcodebuild build \
-  -project app/RockyFeed.xcodeproj \
+  -project RockyFeed.xcodeproj \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .workshop/DerivedData \
+  -derivedDataPath ../.workshop/DerivedData \
   -quiet"
 
 # 1. Resolve the packages once, untimed. Otherwise your first clean build
 #    also clones Alamofire and Kingfisher, and you have measured resolution
 #    instead of compilation.
 xcodebuild -resolvePackageDependencies \
-  -project app/RockyFeed.xcodeproj \
+  -project RockyFeed.xcodeproj \
   -scheme RockyFeed \
-  -derivedDataPath .workshop/DerivedData
+  -derivedDataPath ../.workshop/DerivedData
 
 # 2. Clean build. --prepare wipes the products before each run.
 #    --warmup throws the first, cold run away.
 hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build' \
-  --export-json .workshop/measurements/baseline-clean-build.json \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/baseline-clean-build.json \
   "$BUILD"
 
 # 3. Incremental build. --prepare touches one file so each run recompiles it:
 #    the everyday edit-build loop. --warmup builds the tree first, so run 1
 #    is not measuring a real build.
 hyperfine --runs 3 --warmup 1 \
-  --prepare 'touch app/RockyFeed/RootView.swift' \
-  --export-json .workshop/measurements/baseline-incremental.json \
+  --prepare 'touch RockyFeed/RootView.swift' \
+  --export-json ../.workshop/measurements/baseline-incremental.json \
   "$BUILD"
 
 # A couple of minutes altogether. That wait is not lost time. It is the wait
@@ -332,21 +332,21 @@ got wrong is worth more than one they nodded at.
 **Type this live** (they mirror you):
 
 ```sh
-# Run from the repo root.
+# Run from app/.
 
 # If BUILD is no longer set in this shell:
 export BUILD="xcodebuild build \
-  -project app/RockyFeed.xcodeproj \
+  -project RockyFeed.xcodeproj \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .workshop/DerivedData \
+  -derivedDataPath ../.workshop/DerivedData \
   -quiet"
 
 # The same clean build, one job at a time. Takes a couple of minutes:
 # that slowness is the measurement, not a problem with it.
 hyperfine --runs 1 --warmup 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build' \
-  --export-json .workshop/measurements/serial-clean-build.json \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/serial-clean-build.json \
   "$BUILD -jobs 1"
 
 # Then: Validate my work, and Where did the cores go.
@@ -387,13 +387,13 @@ deps to be Tuist's, not Xcode's. One new idea per task; don't introduce it early
 **Type this live** (they mirror you):
 
 ```sh
-# Run from the repo root, one at a time.
+# Run from app/, one at a time.
 
 # 1. Project.swift IS the task: it describes the whole project in Swift, with
 #    Alamofire and Kingfisher declared as SwiftPM packages right in the manifest.
 #    It is ~80 lines, so take it verbatim rather than typing it. Open it and read
 #    it — the packages: block and the .package(product:) references are the point.
-cat > app/Project.swift <<'PROJECT_SWIFT'
+cat > Project.swift <<'PROJECT_SWIFT'
 import ProjectDescription
 
 // RockyFeed, described in Swift instead of stored in a pbxproj.
@@ -469,35 +469,35 @@ let project = Project(
 PROJECT_SWIFT
 
 # 2. Mark the Tuist root. One line.
-cat > app/Tuist.swift <<'SWIFT'
+cat > Tuist.swift <<'SWIFT'
 import ProjectDescription
 
 let tuist = Tuist()
 SWIFT
 
 # 3. Core stops being its own SwiftPM package — it is a Tuist target now.
-git rm --cached app/Core/Package.swift app/Core/Package.resolved
-rm -f app/Core/Package.swift app/Core/Package.resolved
+git rm --cached Core/Package.swift Core/Package.resolved
+rm -f Core/Package.swift Core/Package.resolved
 
 # 4. Generate. No tuist install: the packages are Xcode-native SPM, resolved at
 #    build time. (tuist install arrives in Task 6, with the module cache.)
-cd app && tuist generate --no-open && cd ..
+tuist generate --no-open
 
 # 5. The checked-in project becomes a build artefact. Merge conflicts stop here.
-git rm -r --cached app/RockyFeed.xcodeproj
-printf 'app/*.xcodeproj\napp/*.xcworkspace\napp/Derived/\n' >> .gitignore
+git rm -r --cached RockyFeed.xcodeproj
+printf 'app/*.xcodeproj\napp/*.xcworkspace\napp/Derived/\n' >> ../.gitignore  # the repo-root ignore
 
 # 6. Re-measure. Note the -workspace (see the hint).
 export BUILD="xcodebuild build \
-  -workspace app/RockyFeed.xcworkspace \
+  -workspace RockyFeed.xcworkspace \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .workshop/DerivedData \
+  -derivedDataPath ../.workshop/DerivedData \
   -quiet"
 
 hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build' \
-  --export-json .workshop/measurements/generated-clean-build.json \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/generated-clean-build.json \
   "$BUILD"
 
 # Then: Validate my work.
@@ -560,11 +560,11 @@ What else it teaches:
 **Type this live** (they mirror you):
 
 ```sh
-# Run from the repo root, one at a time.
+# Run from app/, one at a time.
 
 # 1. The split manifest. Take it verbatim — the layering is the lesson,
 #    and typing five .target(...) blocks is not.
-cat > app/Project.swift <<'PROJECT_SWIFT'
+cat > Project.swift <<'PROJECT_SWIFT'
 import ProjectDescription
 
 // RockyFeed, with the god module taken apart.
@@ -775,40 +775,40 @@ PROJECT_SWIFT
 
 # 2. import Core no longer exists. The app files need the real modules.
 #    Crude, and honest: you would tidy these per-file eventually.
-grep -rl '^import Core$' app/RockyFeed | while read -r f; do
+grep -rl '^import Core$' RockyFeed | while read -r f; do
   perl -i -pe 's/^import Core$/import CoreDesignSystem\nimport CoreImages\nimport CoreModels\nimport CoreDomain/' "$f"
 done
 
 # 3. Four files inside Core now cross a module boundary.
 perl -i -pe 's/^import SwiftUI$/import CoreDesignSystem\nimport SwiftUI/' \
-  app/Core/Sources/Core/Images/RemoteImage.swift
+  Core/Sources/Core/Images/RemoteImage.swift
 perl -i -pe 's/^import Foundation$/import CoreModels\nimport Foundation/' \
-  app/Core/Sources/Core/Session/UserSession.swift \
-  app/Core/Sources/Core/Ranking/RelevanceScoring.swift
+  Core/Sources/Core/Session/UserSession.swift \
+  Core/Sources/Core/Ranking/RelevanceScoring.swift
 perl -i -pe 's/^import Foundation$/import CoreModels\nimport CoreNetworking\nimport Foundation/' \
-  app/Core/Sources/Core/Feed/FeedService.swift
+  Core/Sources/Core/Feed/FeedService.swift
 
 # 4. Regenerate.
-cd app && tuist generate --no-open && cd ..
+tuist generate --no-open
 
 # 5. Measure both, the same two shapes as Task 1, new export paths.
 export BUILD="xcodebuild build \
-  -workspace app/RockyFeed.xcworkspace \
+  -workspace RockyFeed.xcworkspace \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .workshop/DerivedData \
+  -derivedDataPath ../.workshop/DerivedData \
   -quiet"
 
 # Clean build — expect this to be SLOWER than Task 1.
 hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build' \
-  --export-json .workshop/measurements/split-clean-build.json \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/split-clean-build.json \
   "$BUILD"
 
 # Incremental build — expect this to be FASTER than Task 1.
 hyperfine --runs 3 --warmup 1 \
-  --prepare 'touch app/RockyFeed/RootView.swift' \
-  --export-json .workshop/measurements/split-incremental-build.json \
+  --prepare 'touch RockyFeed/RootView.swift' \
+  --export-json ../.workshop/measurements/split-incremental-build.json \
   "$BUILD"
 
 # Then: Validate my work, and What did it cost.
@@ -870,31 +870,31 @@ is bandwidth-bound) which sets up task 6.
 **Type this live** (they mirror you):
 
 ```sh
-# Run these from the repo root, one at a time, and watch each one.
+# Run these from app/, one at a time, and watch each one.
 
 # If BUILD is no longer set in this shell:
 export BUILD="xcodebuild build \
-  -workspace app/RockyFeed.xcworkspace \
+  -workspace RockyFeed.xcworkspace \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .workshop/DerivedData \
-  COMPILATION_CACHE_CAS_PATH=.workshop/CompilationCache.noindex \
+  -derivedDataPath ../.workshop/DerivedData \
+  COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex \
   -quiet"
 
 # 1. Clean build with the cache warm.
 #    The --warmup run does double duty here: it fills the cache, so every
 #    timed run is reading one rather than writing one.
 hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build' \
-  --export-json .workshop/measurements/cached-clean-build.json \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/cached-clean-build.json \
   "$BUILD"
 
 # 2. Clean build with the cache cold. Products and cache both gone before
 #    each run: a fresh CI runner, or the morning after an Xcode update.
 #    One run, because it is the expensive one.
 hyperfine --runs 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build .workshop/CompilationCache.noindex' \
-  --export-json .workshop/measurements/cold-cache-clean-build.json \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build ../.workshop/CompilationCache.noindex' \
+  --export-json ../.workshop/measurements/cold-cache-clean-build.json \
   "$BUILD"
 
 # Then: Validate my work, and So what did it cost.
@@ -967,13 +967,13 @@ until you regenerate it.
 **Type this live** (they mirror you):
 
 ```sh
-# Run from the repo root, one at a time.
+# Run from app/, one at a time.
 
 # 1. Move the dependencies into Tuist's hands so tuist cache can see them.
 #    Project.swift swaps .package(product:) for .external(name:), and a new
 #    Tuist/Package.swift lists the packages. Take both verbatim from the branch:
-mkdir -p app/Tuist
-cat > app/Project.swift <<'PROJECT_SWIFT'
+mkdir -p Tuist
+cat > Project.swift <<'PROJECT_SWIFT'
 import ProjectDescription
 
 // RockyFeed, with the god module taken apart.
@@ -1177,7 +1177,7 @@ let project = Project(
     ]
 )
 PROJECT_SWIFT
-cat > app/Tuist/Package.swift <<'PACKAGE_SWIFT'
+cat > Tuist/Package.swift <<'PACKAGE_SWIFT'
 // swift-tools-version: 6.0
 import PackageDescription
 
@@ -1189,31 +1189,31 @@ let package = Package(
     ]
 )
 PACKAGE_SWIFT
-printf 'app/Tuist/.build/\n' >> .gitignore
+printf 'app/Tuist/.build/\n' >> ../.gitignore  # the repo-root ignore
 
 # 2. Resolve them, now that they are Tuist-managed.
-cd app && tuist install && cd ..
+tuist install
 
 # 3. Warm the module cache. Slow the first time: it is building every module
 #    once and storing it. You have seen this trade before.
-cd app && tuist cache && cd ..
+tuist cache
 
 # 4. Generate with the app focused. Everything else arrives as a binary.
 #    Read what it prints: those are the targets it is not going to build.
-cd app && tuist generate RockyFeed --no-open && cd ..
+tuist generate RockyFeed --no-open
 
 # 5. Same clean build as every other task.
 export BUILD="xcodebuild build \
-  -workspace app/RockyFeed.xcworkspace \
+  -workspace RockyFeed.xcworkspace \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .workshop/DerivedData \
-  COMPILATION_CACHE_CAS_PATH=.workshop/CompilationCache.noindex \
+  -derivedDataPath ../.workshop/DerivedData \
+  COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex \
   -quiet"
 
 hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build' \
-  --export-json .workshop/measurements/module-cache-clean-build.json \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/module-cache-clean-build.json \
   "$BUILD"
 
 # Then: Validate my work, and Was it worth it.
@@ -1257,27 +1257,27 @@ code telling you so.**
 **Type this live** (they mirror you):
 
 ```sh
-# Run these from the repo root, one at a time.
+# Run these from app/, one at a time.
 
 # 1. The whole suite, every test, every time. This is CI today.
 hyperfine --runs 1 \
-  --export-json .workshop/measurements/test-everything.json \
+  --export-json ../.workshop/measurements/test-everything.json \
   "xcodebuild test \
-    -workspace app/RockyFeed.xcworkspace \
+    -workspace RockyFeed.xcworkspace \
     -scheme RockyFeed-Workspace \
     -destination 'platform=iOS Simulator,name=iPhone 17e' \
-    -derivedDataPath .workshop/DerivedData \
+    -derivedDataPath ../.workshop/DerivedData \
     -quiet"
 
 # 2. Now Tuist's runner. First run does the work...
-cd app && tuist test && cd ..
+tuist test
 
 # ...and the second refuses to, because nothing changed.
-cd app && tuist test && cd ..
+tuist test
 
 # 3. Prove it notices real changes: touch a test, run again.
-touch app/RockyFeedTests/ImageCacheTests.swift
-cd app && tuist test && cd ..
+touch RockyFeedTests/ImageCacheTests.swift
+tuist test
 
 # 4. Then open that file and decide whether you would let it be skipped.
 #    Fix it so that skipping it is an honest thing to do.
@@ -1316,23 +1316,21 @@ while `basedOnDependencyAnalysis: false` stays. Both, or neither works.
 **Type this live** (they mirror you):
 
 ```sh
-# Run from the repo root, one at a time.
+# Run from app/, one at a time.
 
 # 1. Build the same source twice, into two places.
-cd app
 xcodebuild build -workspace RockyFeed.xcworkspace -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/build-a -quiet
 xcodebuild build -workspace RockyFeed.xcworkspace -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/build-b -quiet
-cd ..
 
 # 2. Are they the same app?
 diff -r /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app \
         /tmp/build-b/Build/Products/Debug-iphonesimulator/RockyFeed.app
 
 # 3. Look at what differs.
-diff /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildInfo.plist \
-     /tmp/build-b/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildInfo.plist
+diff /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildStamp.plist \
+     /tmp/build-b/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildStamp.plist
 
 # 4. Now open the culprit and fix it.
 #    - take the timestamp out
@@ -1343,7 +1341,7 @@ diff /tmp/build-a/Build/Products/Debug-iphonesimulator/RockyFeed.app/BuildInfo.p
 #    app/Project.swift
 
 # 5. Prove it: regenerate, build twice more, diff again. Silence is the pass.
-cd app && tuist generate --no-open && cd ..
+tuist generate --no-open
 
 # Then: Validate my work.
 ```
@@ -1497,7 +1495,7 @@ it's worthless in a month if you don't.
 **Type this live** (they mirror you):
 
 ```sh
-# Run these from the repo root, one at a time.
+# Run these from app/, one at a time.
 
 # 1. Sign in. This opens a browser.
 tuist auth login
@@ -1517,17 +1515,15 @@ tuist project create <you>/rockyfeed --build-system xcode
 #      )
 
 # 4. Build through tuist, which uploads the build when it finishes.
-cd app
 tuist xcodebuild build \
   -workspace RockyFeed.xcworkspace \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .workshop/DerivedData \
+  -derivedDataPath ../.workshop/DerivedData \
   -quiet
-cd ..
 
 # If it says the upload timed out, that is bandwidth, not you. Retry with:
-#   cd app && tuist inspect build --derived-data-path .workshop/DerivedData
+#   tuist inspect build --derived-data-path ../.workshop/DerivedData
 
 # Then: Validate my work, and What can it see that you could not.
 ```
@@ -1567,9 +1563,7 @@ it is a shared cache of nothing.
 **Type this live** (they mirror you):
 
 ```sh
-# Run from the repo root, one at a time.
-
-cd app
+# Run from app/, one at a time.
 
 # 1. Warm it. With a fullHandle set, this now pushes to the server too.
 #    Read the last line: it tells you hits, misses, and where they came from.
@@ -1585,8 +1579,6 @@ tuist cache
 # 4. And the build that follows is the one from task 6, on a machine that
 #    compiled none of it.
 tuist generate --no-open
-
-cd ..
 
 # Then: Validate my work, and So who is this actually for.
 ```
@@ -1652,7 +1644,11 @@ claude mcp add --transport http tuist https://tuist.dev/mcp
 
 ## Facilitator gotchas
 
-- **Reset between runs:** `rm -rf .workshop` and `git checkout app/`.
+- **Reset between runs (from `app/`, where you and attendees stand):**
+  `rm -rf ../.workshop && git checkout HEAD -- . ../.gitignore && git clean -fd .`.
+  The `git clean` is the part a bare `git checkout` misses: Tuist tasks leave
+  untracked `Project.swift`, `Tuist.swift` and `RockyFeed.xcworkspace/` behind, and
+  Task 3 untracks the pbxproj — `checkout HEAD` re-tracks it, `clean` sweeps the rest.
 - **Checkpoints:** `git stash && git checkout solutions/03`. Tasks 1 and 2 have
   none, on purpose — they're measurements of your own machine.
 - **The flaky test** (`RockyFeedTests/ImageCacheTests`) fails ~25% of runs. If
@@ -1663,6 +1659,11 @@ claude mcp add --transport http tuist https://tuist.dev/mcp
 - **Load matters.** A measurement taken on a busy laptop came back σ=33%; the same
   one on a quiet machine gave σ=0.5%. If someone's numbers are wild, ask what else
   is running.
+- **`DVTDeviceOperation: Encountered a build number "" …` during `tuist generate`**
+  is benign Xcode log noise, not an error. From Task 3 on, the deps are Xcode-native
+  SPM, so `tuist generate` shells out to `xcodebuild -resolvePackageDependencies`, and
+  that command prints this line on current Xcode regardless. The project still
+  generates — tell anyone who asks to ignore it.
 - **If Task 8's stamp phase can't read git** (commit shows `unknown`), check
   `ENABLE_USER_SCRIPT_SANDBOXING`. `Project.swift` sets no build settings — it
   relies on the default, which is `NO`, so the script can shell out to git. If a

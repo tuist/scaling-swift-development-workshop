@@ -77,7 +77,7 @@ small half of the build.
 
 ${brand.bold("Measuring it")}
 Same clean-build shape as task 4, with ${brand.bold("one")} addition to the ${brand.dim("$BUILD")} command:
-${brand.accent("COMPILATION_CACHE_CAS_PATH=.workshop/CompilationCache.noindex")}. That points the
+${brand.accent("COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex")}. That points the
 cache at the workshop's own directory rather than Xcode's global one — so it
 touches none of your real caches, and so you can throw it away on purpose in a
 moment. It did nothing in the earlier tasks (the setting was off), which is why
@@ -93,7 +93,7 @@ ${brand.dim("surprise is the lesson.")}`;
 // See the note in Task 1: no apostrophes in these comments. A stock zsh has
 // interactive_comments off, and an apostrophe turns a harmless comment into an
 // unmatched quote that eats the commands below it.
-const commands = shell(`# Run these from the repo root, one at a time, and watch each one.
+const commands = shell(`# Run these from app/, one at a time, and watch each one.
 
 # If BUILD is no longer set in this shell:
 ${buildEnvGeneratedCached}

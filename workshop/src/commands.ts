@@ -8,14 +8,16 @@ import { paths, scheme, destination } from "./paths.js";
  * point of the day is that they leave able to measure their own project, and
  * nobody learns hyperfine by watching a spinner someone else started.
  *
- * Every path is derived from paths.ts and rendered relative to the repo root.
- * That's deliberate — the runner reads exactly the files these commands write, so
- * the two must never drift apart. Hardcoding the strings here would let someone
- * move a directory and leave the validators silently looking in the old place.
+ * Every path is derived from paths.ts and rendered relative to app/ — because that
+ * is where these commands run. You are working on the app (xcodebuild, tuist), so
+ * you stand in app/; the workshop's own state lives one level up at the repo root,
+ * which is why DerivedData, the cache and the measurements come out as
+ * `../.workshop/...`. Deriving from paths.ts keeps the strings and the runner's own
+ * reads in lockstep: move a directory and both follow.
  */
 
-/** A repo-root-relative path, which is what someone types in their terminal. */
-const rel = (absolute: string): string => path.relative(paths.repoRoot, absolute);
+/** A path relative to app/, which is where the attendee stands to run these. */
+const rel = (absolute: string): string => path.relative(paths.app, absolute);
 
 const project = rel(paths.xcodeproj);
 const workspace = rel(paths.xcworkspace);
@@ -49,7 +51,7 @@ const cachedArgs = `${destAndDerived} \\
 /**
  * The build command for tasks 1 and 2, before the project is generated.
  *
- * Run from the repo root — every path here is relative to it.
+ * Run from app/ — every path here is relative to it.
  */
 export const buildEnv = `export BUILD="xcodebuild build \\
   -project ${project} \\
@@ -135,7 +137,7 @@ export const serialCleanBuild = (label: string, runs = 1): string =>
  * honest "I edited the screen I'm working on and hit build" number, and it exists
  * in every state we compare (it never moves between the monolith and the split).
  */
-export const incrementalEditFile = "app/RockyFeed/RootView.swift";
+export const incrementalEditFile = "RockyFeed/RootView.swift";
 
 /**
  * An incremental build: edit one file, rebuild.
@@ -159,7 +161,7 @@ export const coldCacheBuild = (label: string, runs = 1): string =>
   "$BUILD"`;
 
 /** Warm the module cache: build every cacheable target, store it as an xcframework. */
-export const tuistCache = `cd app && tuist cache && cd ..`;
+export const tuistCache = `tuist cache`;
 
 /**
  * Generate with the app focused.
@@ -168,7 +170,7 @@ export const tuistCache = `cd app && tuist cache && cd ..`;
  * prebuilt binary". That is the whole point of a module cache, and it is only
  * possible because task 4 gave the project modules to swap.
  */
-export const tuistGenerateFocused = `cd app && tuist generate RockyFeed --no-open && cd ..`;
+export const tuistGenerateFocused = `tuist generate RockyFeed --no-open`;
 
 /**
  * Run the whole test suite, every test, every time. The status quo.
@@ -189,7 +191,7 @@ export const testEverything = (label: string, runs = 1): string =>
  * Tuist's test runner: hashes each test target the way task 6 hashed each build
  * target, and skips the ones whose inputs have not moved.
  */
-export const testSelective = `cd app && tuist test && cd ..`;
+export const testSelective = `tuist test`;
 
 export const labels = {
   baselineClean: "baseline-clean-build",

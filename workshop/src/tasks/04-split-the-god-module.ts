@@ -106,29 +106,29 @@ ${brand.dim("import Core")} stops existing. Every file that used it needs the mo
 uses. The commands reveal has a sed for the app; four files inside Core need a
 line each.`;
 
-const commands = shell(`# Run from the repo root, one at a time.
+const commands = shell(`# Run from app/, one at a time.
 
 # 1. The split manifest. Take it verbatim — the layering is the lesson,
 #    and typing five .target(...) blocks is not.
-git show solutions/04:app/Project.swift > app/Project.swift
+git show solutions/04:app/Project.swift > Project.swift
 
 # 2. import Core no longer exists. The app files need the real modules.
 #    Crude, and honest: you would tidy these per-file eventually.
-grep -rl '^import Core$' app/RockyFeed | while read -r f; do
+grep -rl '^import Core$' RockyFeed | while read -r f; do
   perl -i -pe 's/^import Core$/import CoreDesignSystem\\nimport CoreImages\\nimport CoreModels\\nimport CoreDomain/' "$f"
 done
 
 # 3. Four files inside Core now cross a module boundary.
 perl -i -pe 's/^import SwiftUI$/import CoreDesignSystem\\nimport SwiftUI/' \\
-  app/Core/Sources/Core/Images/RemoteImage.swift
+  Core/Sources/Core/Images/RemoteImage.swift
 perl -i -pe 's/^import Foundation$/import CoreModels\\nimport Foundation/' \\
-  app/Core/Sources/Core/Session/UserSession.swift \\
-  app/Core/Sources/Core/Ranking/RelevanceScoring.swift
+  Core/Sources/Core/Session/UserSession.swift \\
+  Core/Sources/Core/Ranking/RelevanceScoring.swift
 perl -i -pe 's/^import Foundation$/import CoreModels\\nimport CoreNetworking\\nimport Foundation/' \\
-  app/Core/Sources/Core/Feed/FeedService.swift
+  Core/Sources/Core/Feed/FeedService.swift
 
 # 4. Regenerate.
-cd app && tuist generate --no-open && cd ..
+tuist generate --no-open
 
 # 5. Measure both, the same two shapes as Task 1, new export paths.
 ${buildEnvGenerated}

@@ -53,7 +53,7 @@ ${brand.dim("The docs also describe a scheme post-action. That is for builds you
 ${brand.dim("inside Xcode, where there is no command for it to wrap. You are in a terminal,")}
 ${brand.dim("so you do not need it.")}`;
 
-const commands = shell(`# Run these from the repo root, one at a time.
+const commands = shell(`# Run these from app/, one at a time.
 
 # 1. Sign in. This opens a browser.
 tuist auth login
@@ -73,17 +73,15 @@ tuist project create <you>/rockyfeed --build-system xcode
 #      )
 
 # 4. Build through tuist, which uploads the build when it finishes.
-cd app
 tuist xcodebuild build \\
   -workspace RockyFeed.xcworkspace \\
   -scheme RockyFeed \\
   -destination 'generic/platform=iOS Simulator' \\
-  -derivedDataPath .workshop/DerivedData \\
+  -derivedDataPath ../.workshop/DerivedData \\
   -quiet
-cd ..
 
 # If it says the upload timed out, that is bandwidth, not you. Retry with:
-#   cd app && tuist inspect build --derived-data-path .workshop/DerivedData
+#   tuist inspect build --derived-data-path ../.workshop/DerivedData
 
 # Then: Validate my work, and What can it see that you could not.`);
 

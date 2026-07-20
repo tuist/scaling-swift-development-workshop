@@ -92,32 +92,32 @@ using ${brand.dim("-project")} after generating and you get:
 
 which is the build system telling you to point at the workspace instead.`;
 
-const commands = shell(`# Run from the repo root, one at a time.
+const commands = shell(`# Run from app/, one at a time.
 
 # 1. Project.swift IS the task: it describes the whole project in Swift, with
 #    Alamofire and Kingfisher declared as SwiftPM packages right in the manifest.
 #    It is ~80 lines, so take it verbatim rather than typing it. Open it and read
 #    it — the packages: block and the .package(product:) references are the point.
-git show solutions/03:app/Project.swift > app/Project.swift
+git show solutions/03:app/Project.swift > Project.swift
 
 # 2. Mark the Tuist root. One line.
-cat > app/Tuist.swift <<'SWIFT'
+cat > Tuist.swift <<'SWIFT'
 import ProjectDescription
 
 let tuist = Tuist()
 SWIFT
 
 # 3. Core stops being its own SwiftPM package — it is a Tuist target now.
-git rm --cached app/Core/Package.swift app/Core/Package.resolved
-rm -f app/Core/Package.swift app/Core/Package.resolved
+git rm --cached Core/Package.swift Core/Package.resolved
+rm -f Core/Package.swift Core/Package.resolved
 
 # 4. Generate. No tuist install: the packages are Xcode-native SPM, resolved at
 #    build time. (tuist install arrives in Task 6, with the module cache.)
-cd app && tuist generate --no-open && cd ..
+tuist generate --no-open
 
 # 5. The checked-in project becomes a build artefact. Merge conflicts stop here.
-git rm -r --cached app/RockyFeed.xcodeproj
-printf 'app/*.xcodeproj\\napp/*.xcworkspace\\napp/Derived/\\n' >> .gitignore
+git rm -r --cached RockyFeed.xcodeproj
+printf 'app/*.xcodeproj\\napp/*.xcworkspace\\napp/Derived/\\n' >> ../.gitignore  # the repo-root ignore
 
 # 6. Re-measure. Note the -workspace (see the hint).
 ${buildEnvGenerated}
