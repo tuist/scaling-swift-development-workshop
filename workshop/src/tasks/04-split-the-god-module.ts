@@ -73,28 +73,29 @@ together and quietly costing everyone a minute a build.
 
 ${brand.bold("A layering that works")}
 
-  ${brand.accent("CoreModels")}         Models, Formatting, Fixtures    → nothing
-  ${brand.accent("CoreDesignSystem")}   DesignSystem, Components        → nothing
-  ${brand.accent("CoreNetworking")}     Networking                      → Alamofire
-  ${brand.accent("CoreImages")}         Images                          → Kingfisher, CoreDesignSystem
-  ${brand.accent("CoreDomain")}         Session, Storage, Feed, Ranking → CoreModels, CoreNetworking
+  ${brand.accent("Models")}         Models, Formatting, Fixtures    → nothing
+  ${brand.accent("DesignSystem")}   DesignSystem, Components        → nothing
+  ${brand.accent("Networking")}     Networking                      → Alamofire
+  ${brand.accent("Images")}         Images                          → Kingfisher, DesignSystem
+  ${brand.accent("Domain")}         Session, Storage, Feed, Ranking → Models, Networking
 
-${brand.accent("CoreModels")} and ${brand.accent("CoreDesignSystem")} depend on nothing, so they start ${brand.bold("immediately")} —
+${brand.accent("Models")} and ${brand.accent("DesignSystem")} depend on nothing, so they start ${brand.bold("immediately")} —
 alongside Alamofire and Kingfisher instead of behind them. That's 61 files off the
 critical path.
 
-${brand.bold("⚠️ Do not call that last one CoreServices.")}
-It is the obvious name, and it detonates. ${brand.accent("CoreServices")} is an Apple system
-framework, and Kingfisher and Alamofire both import ${brand.dim("MobileCoreServices")}, whose
-umbrella header includes ${brand.dim("<CoreServices/CoreServices.h>")}. Name a module CoreServices
-and Clang resolves that include to ${brand.bold("yours")}, then fails to build a system module with
-an error that mentions neither your module nor your code:
+${brand.bold("⚠️ Why that last one is Domain, and never CoreServices")}
+${brand.accent("Services")} is the tempting name for it — and bare Services would build fine. But the
+moment a house style prefixes it into ${brand.accent("CoreServices")}, it detonates: that is an Apple
+system framework, and Kingfisher and Alamofire both import ${brand.dim("MobileCoreServices")}, whose
+umbrella header includes ${brand.dim("<CoreServices/CoreServices.h>")}. Clang resolves that include
+to ${brand.bold("yours")}, then fails to build a system module with an error that mentions neither
+your module nor your code:
 
   ${brand.error("MobileCoreServices.h: fatal error: 'CoreServices/CoreServices.h' file not found")}
 
-${brand.dim("Cost us twelve errors and a confused twenty minutes. A monolith cannot make")}
-${brand.dim("this mistake, because it only has one name. The moment you start naming")}
-${brand.dim("modules, you are in Apple's namespace with them.")}
+${brand.dim("Cost us twelve errors and a confused twenty minutes. Domain is the plainer, safer")}
+${brand.dim("name — and it is why none of these modules carry a prefix. A monolith cannot make")}
+${brand.dim("this mistake: it has one name. Name modules, and you share Apple's namespace too.")}
 
 ${brand.bold("You don't have to move any files")}
 Tuist's ${brand.dim("sources:")} takes globs, so a module boundary is a manifest decision. Point
@@ -115,16 +116,16 @@ git show solutions/04:app/Project.swift > Project.swift
 # 2. import Core no longer exists. The app files need the real modules.
 #    Crude, and honest: you would tidy these per-file eventually.
 grep -rl '^import Core$' RockyFeed | while read -r f; do
-  perl -i -pe 's/^import Core$/import CoreDesignSystem\\nimport CoreImages\\nimport CoreModels\\nimport CoreDomain/' "$f"
+  perl -i -pe 's/^import Core$/import DesignSystem\\nimport Images\\nimport Models\\nimport Domain/' "$f"
 done
 
 # 3. Four files inside Core now cross a module boundary.
-perl -i -pe 's/^import SwiftUI$/import CoreDesignSystem\\nimport SwiftUI/' \\
+perl -i -pe 's/^import SwiftUI$/import DesignSystem\\nimport SwiftUI/' \\
   Core/Sources/Core/Images/RemoteImage.swift
-perl -i -pe 's/^import Foundation$/import CoreModels\\nimport Foundation/' \\
+perl -i -pe 's/^import Foundation$/import Models\\nimport Foundation/' \\
   Core/Sources/Core/Session/UserSession.swift \\
   Core/Sources/Core/Ranking/RelevanceScoring.swift
-perl -i -pe 's/^import Foundation$/import CoreModels\\nimport CoreNetworking\\nimport Foundation/' \\
+perl -i -pe 's/^import Foundation$/import Models\\nimport Networking\\nimport Foundation/' \\
   Core/Sources/Core/Feed/FeedService.swift
 
 # 4. Regenerate.
@@ -141,7 +142,7 @@ ${incrementalBuild(labels.splitIncremental)}
 
 # Then: Validate my work, and What did it cost.`);
 
-const EXPECTED_MODULES = ["CoreDesignSystem", "CoreModels", "CoreNetworking", "CoreDomain", "CoreImages"];
+const EXPECTED_MODULES = ["DesignSystem", "Models", "Networking", "Domain", "Images"];
 
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];

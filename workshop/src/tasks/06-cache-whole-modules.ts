@@ -45,10 +45,10 @@ Task 5 hashed a compile job. This hashes a ${brand.bold("target")}: its sources,
 settings, its platform — and, crucially, ${brand.bold("the hashes of everything it depends on")}.
 That last part is the whole story.
 
-  ${brand.dim("hash(CoreModels)      = f(sources, settings)")}
-  ${brand.dim("hash(CoreNetworking)  = f(sources, settings, hash(Alamofire))")}
-  ${brand.dim("hash(CoreDomain)      = f(sources, settings, hash(CoreModels), hash(CoreNetworking))")}
-  ${brand.dim("hash(FeatureFeed)     = f(sources, settings, hash(CoreDomain), ...)")}
+  ${brand.dim("hash(Models)       = f(sources, settings)")}
+  ${brand.dim("hash(Networking)   = f(sources, settings, hash(Alamofire))")}
+  ${brand.dim("hash(Domain)       = f(sources, settings, hash(Models), hash(Networking))")}
+  ${brand.dim("hash(FeatureFeed)  = f(sources, settings, hash(Domain), ...)")}
 
 Match the hash, fetch an ${brand.dim("xcframework")} and skip the target entirely. Miss, and you
 build it and store it.
@@ -214,10 +214,10 @@ ${brand.dim("This is why the talk puts the god module under \"granularity is the
 ${brand.dim("and says every module is a cache miss. It was never a story about cores.")}
 
 ${brand.bold("One more thing, and it is the sharp edge.")}
-Change something deep — ${brand.accent("CoreNetworking")}, say — and watch what misses. It is not
+Change something deep — ${brand.accent("Networking")}, say — and watch what misses. It is not
 one module. Every module above it has that hash in ${brand.bold("its")} hash, so the whole stack
 above invalidates. On this project a networking change misses ${brand.bold("8")} of 15 targets,
-because everything routes through ${brand.accent("CoreDomain")}.
+because everything routes through ${brand.accent("Domain")}.
 
 ${brand.dim("Which means you have built a smaller god module in the middle of your graph.")}
 ${brand.dim("Splitting is not the end of the work. The shape decides what a change costs,")}

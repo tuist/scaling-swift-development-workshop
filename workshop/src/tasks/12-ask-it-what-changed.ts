@@ -130,7 +130,7 @@ same standard applied to a codebase that keeps moving, without anyone having to
 remember to run hyperfine on a Tuesday.
 
 ${brand.bold("What it cannot do")}
-It reads. It will not fix your graph, and it does not know that ${brand.accent("CoreDomain")} is a
+It reads. It will not fix your graph, and it does not know that ${brand.accent("Domain")} is a
 bottleneck because eight targets route through it — you know that, because you
 measured it in task 6. An agent with your build history is a faster way to notice
 something is wrong. Deciding what to do about it is still the job you spent today
