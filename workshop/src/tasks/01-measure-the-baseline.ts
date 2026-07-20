@@ -17,11 +17,12 @@ ${brand.bold("Your job")}
 Measure two things, and save each one into ${brand.accent(".workshop/measurements/")} so the
 runner can read it back:
 
-  ${brand.accent("Clean build")}   ${labels.baselineClean}${brand.dim(".json")}
-                ${brand.bold("The number we chase.")} What CI pays on every run.
+  ${brand.accent("Clean build")}    ${labels.baselineClean}${brand.dim(".json")}
+                 ${brand.bold("The number we chase.")} What CI pays on every run.
 
-  ${brand.accent("No-op build")}   ${labels.baselineIncremental}${brand.dim(".json")}
-                Built again, changed nothing. Should be free. Find out.
+  ${brand.accent("Incremental")}    ${labels.baselineIncremental}${brand.dim(".json")}
+  ${brand.accent("build")}          Change one file, build again — the loop you live in all
+                 day. Should be cheap. Find out how cheap.
 
 ${brand.bold("The tool")}
 ${brand.accent("hyperfine")} is already installed. Timing a build once tells you almost nothing
@@ -38,17 +39,19 @@ const hint = `${brand.bold("Three flags do the work.")}
   ${brand.accent("--prepare '<cmd>'")}      runs before ${brand.bold("each")} timed run, untimed
   ${brand.accent("--warmup <n>")}           untimed runs first, to settle things down
 
-${brand.bold("Now the thinking part.")}
+${brand.bold("Now the thinking part.")} ${brand.dim("The --prepare is what decides which build you measure.")}
 
-A ${brand.bold("clean build")} must start from nothing every time, so something has to throw the
-build products away before each run — but ${brand.bold("only")} the products. Wipe all of
-DerivedData and you'd re-resolve the packages too, and measure that instead.
+A ${brand.bold("clean build")} must start from nothing every time, so ${brand.accent("--prepare")} throws the build
+products away before each run — but ${brand.bold("only")} the products. Wipe all of DerivedData
+and you'd re-resolve the packages too, and measure that instead.
 
-A ${brand.bold("no-op build")} is the opposite. It needs no resetting; it needs the build to be
-${brand.bold("already done")} before the clock starts. If the tree is stale when you begin, run 1
-measures a real rebuild and the mean is a work of fiction.
+An ${brand.bold("incremental build")} is the everyday loop: change one file, build again. So
+${brand.accent("--prepare")} ${brand.bold("touches")} a source file before each run — enough to make the build system
+recompile it. Same flag, opposite job: one clears the world, the other nudges it.
 
-${brand.bold("And the rule that catches everyone: the first run of anything is a lie.")}
+Both still need ${brand.accent("--warmup")}, because of the rule that catches everyone:
+
+${brand.bold("the first run of anything is a lie.")}
 
 Not because machines are noisy — because the first run does work the others never
 repeat. It resolves the packages. It builds the module cache. It warms the OS file
@@ -88,8 +91,9 @@ ${resolvePackages}
 #    --warmup throws the first, cold run away.
 ${cleanBuild(labels.baselineClean)}
 
-# 3. No-op build. No --prepare: nothing to reset. The warmup is what
-#    guarantees the build is already done before the clock starts.
+# 3. Incremental build. --prepare touches one file so each run recompiles it:
+#    the everyday edit-build loop. --warmup builds the tree first, so run 1
+#    is not measuring a real build.
 ${incrementalBuild(labels.baselineIncremental)}
 
 # A couple of minutes altogether. That wait is not lost time. It is the wait
@@ -118,7 +122,7 @@ const validate = async (): Promise<ValidationResult> => {
 
   const incremental = await readMeasurement(labels.baselineIncremental);
   checks.push({
-    label: "No-op build measured",
+    label: "Incremental build measured",
     ok: incremental !== null,
     detail: incremental
       ? undefined
@@ -150,23 +154,24 @@ const validate = async (): Promise<ValidationResult> => {
   if (clean && incremental) {
     const looksLikeACleanBuild = clean.mean > incremental.mean;
     checks.push({
-      label: "The clean build costs more than the no-op",
+      label: "The clean build costs more than the incremental one",
       ok: looksLikeACleanBuild,
       detail: looksLikeACleanBuild
         ? undefined
-        : "Suspicious — a clean build should cost more than doing nothing. Did --prepare " +
-          "actually remove the build products?",
+        : "Suspicious — a from-scratch build should cost more than recompiling one file. Did " +
+          "the clean build's --prepare actually remove the products, and did the incremental's " +
+          "--prepare only touch a file?",
     });
 
     const steady = incremental.runs < 2 || incremental.stddev < incremental.mean;
     checks.push({
-      label: "The no-op measurement is steady",
+      label: "The incremental measurement is steady",
       ok: steady,
       detail: steady
         ? undefined
         : `σ of ${formatDuration(incremental.stddev)} on a ${formatDuration(incremental.mean)} mean ` +
-          "means the runs disagree wildly. The usual cause is a missing --warmup: run 1 rebuilt " +
-          "something, the rest didn't.",
+          "means the runs disagree wildly. The usual cause is a missing --warmup: run 1 built the " +
+          "tree from cold, the rest only recompiled one file.",
     });
   }
 
@@ -174,7 +179,7 @@ const validate = async (): Promise<ValidationResult> => {
     clean || incremental
       ? renderTable([
           { label: "Clean build", stat: clean },
-          { label: "No-op build", stat: incremental },
+          { label: "Incremental build", stat: incremental },
         ])
       : undefined;
 

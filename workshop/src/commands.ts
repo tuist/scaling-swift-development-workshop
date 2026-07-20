@@ -127,9 +127,27 @@ export const serialCleanBuild = (label: string, runs = 1): string =>
   --export-json ${exportPath(label)} \\
   "$BUILD -jobs 1"`;
 
-/** A no-op build. The warmup is load-bearing — see the hint in Task 1. */
+/**
+ * The file we edit to trigger an incremental build.
+ *
+ * It's the app's root view — top of the graph, so touching it recompiles exactly
+ * one file and relinks the app, with no downstream fan-out. That makes it the
+ * honest "I edited the screen I'm working on and hit build" number, and it exists
+ * in every state we compare (it never moves between the monolith and the split).
+ */
+export const incrementalEditFile = "app/RockyFeed/RootView.swift";
+
+/**
+ * An incremental build: edit one file, rebuild.
+ *
+ * `touch` bumps the file's mtime before each timed run, which is enough to make
+ * the build system recompile it — the everyday edit-build loop, not a from-clean
+ * build and not a no-op. The warmup run gets the tree built first, so every timed
+ * run measures the same one-file change rather than run 1 measuring a real build.
+ */
 export const incrementalBuild = (label: string, runs = 3): string =>
   `hyperfine --runs ${runs} --warmup 1 \\
+  --prepare 'touch ${incrementalEditFile}' \\
   --export-json ${exportPath(label)} \\
   "$BUILD"`;
 
@@ -179,7 +197,7 @@ export const labels = {
   serialClean: "serial-clean-build",
   generatedClean: "generated-clean-build",
   splitClean: "split-clean-build",
-  splitSerial: "split-serial-build",
+  splitIncremental: "split-incremental-build",
   cachedClean: "cached-clean-build",
   moduleCacheClean: "module-cache-clean-build",
   coldCacheClean: "cold-cache-clean-build",

@@ -21,7 +21,7 @@ import type { WorkshopTask } from "./types.js";
  *   1. Measure the baseline     you can't improve what you can't see
  *   2. Your cores are idle      2.96x of 11 — and why no arrangement of modules fixes it
  *   3. Generate it with Tuist   move the graph out of a pbxproj and into Swift
- *   4. Split the god module     53% SLOWER, on purpose — modules aren't faster
+ *   4. Split the god module     a trade: clean build slower, inner loop faster
  *   5. Reuse, don't recompute   the compilation cache: fine-grained, per compile job
  *   6. Cache whole modules      the module cache: coarse — and where task 4 gets paid
  *   7. Test only what changed   the same contract, in the test suite
@@ -32,10 +32,13 @@ import type { WorkshopTask } from "./types.js";
  *  12. Ask it what changed      make noticing automatic, because nobody clicks
  *
  * Caching comes *after* modularisation on purpose, and the measurements are why.
- * Splitting the monolith makes the clean build 53% slower and buys no parallelism
- * at all — Xcode already compiles files inside a target concurrently. Modules are
- * not a speed optimisation. They are what makes a build *cacheable*, which task 6
- * then proves: 8.1s for the cached monolith against 3.3s for the cached split.
+ * Splitting the monolith is a two-sided trade, measured: the clean build gets ~53%
+ * slower (more targets to link, sign, embed; and no extra parallelism, because
+ * Xcode already compiles files inside a target concurrently) while the incremental
+ * build gets ~35% faster (touch one file, relink a 3-file app instead of a 90-file
+ * one). It buys no *clean-build* speed on its own — what it buys there is
+ * granularity, i.e. cacheability, which task 6 spends: 8.1s for the cached monolith
+ * against 3.3s for the cached split.
  *
  * Tasks 10 to 12 are where the day stops being about one laptop. Every measurement
  * up to here was taken by hand, once, by one person — which is exactly the habit

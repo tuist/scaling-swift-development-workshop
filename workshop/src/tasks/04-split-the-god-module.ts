@@ -1,12 +1,9 @@
-import os from "node:os";
-import { buildEnvGenerated, cleanBuild, labels, serialCleanBuild } from "../commands.js";
+import { buildEnvGenerated, cleanBuild, incrementalBuild, labels } from "../commands.js";
 import { generatedSchemes, readMeasurement } from "../measure.js";
 import { renderComparison } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
 import { shell } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
-
-const cores = os.cpus().length;
 
 const brief = `${brand.bold("Now change what the project says.")}
 
@@ -20,23 +17,24 @@ Swift. So now it's a manifest edit.
 ${brand.bold("Your job")}
 Split ${brand.accent("Core")} into modules so that ${brand.bold("nothing waits for something it does not use.")}
 
-Then measure both numbers again — the clean build and the serial one:
+Then measure both again — the clean build and the incremental one (edit one file,
+rebuild), the same two you took in Task 1:
 
   ${brand.accent(labels.splitClean)}${brand.dim(".json")}
-  ${brand.accent(labels.splitSerial)}${brand.dim(".json")}
+  ${brand.accent(labels.splitIncremental)}${brand.dim(".json")}
 
-${brand.bold("Fair warning: this will make your build slower.")}
-Not a little. About half again. Measure it anyway — the number is the lesson, and
-a task that only ever shows you wins is a sales pitch, not a workshop.
+${brand.bold("Fair warning: this is a trade, not a win — and you will see both sides.")}
+Your ${brand.bold("clean build gets slower")}, about half again: there are a dozen modules to link,
+sign and embed now where there were two, and no parallelism in return (Task 2
+already showed the cores were never the ceiling).
 
-${brand.dim("Task 2 said the cores were idle because of the graph. Task 2 was wrong, and this")}
-${brand.dim("is the task that proves it: the speedup will not move, because Xcode was already")}
-${brand.dim("compiling the files inside each target in parallel. There was never a queue.")}
+But your ${brand.bold("incremental build gets faster")}: touch one file and you relink a three-file
+app, not a ninety-file monolith. That is the loop you live in all day.
 
-${brand.bold("So why are we doing it?")}
-Because you are not buying speed here. You are buying ${brand.bold("granularity")}, and you spend
-it in Task 6. If you want the argument before the evidence, skip ahead — but it
-lands better if you have felt the regression first.
+${brand.dim("So modularization is not free and it is not magic. It spends clean-build time to")}
+${brand.dim("buy inner-loop time — and it buys one more thing you cannot see yet, granularity,")}
+${brand.dim("which Task 6 spends to win the clean build back too. Measure it anyway: a task")}
+${brand.dim("that only ever shows you wins is a sales pitch, not a workshop.")}
 
 ${brand.bold("Do this bit yourself before taking the hint.")} Open Core, look at what is actually
 in it, and sketch the layers on paper. There is one file in there that will fight
@@ -126,14 +124,16 @@ perl -i -pe 's/^import Foundation$/import CoreModels\\nimport CoreNetworking\\ni
 # 4. Regenerate.
 cd app && tuist generate --no-open && cd ..
 
-# 5. Measure both. Same commands as before, new export paths.
+# 5. Measure both, the same two shapes as Task 1, new export paths.
 ${buildEnvGenerated}
 
+# Clean build — expect this to be SLOWER than Task 1.
 ${cleanBuild(labels.splitClean)}
 
-${serialCleanBuild(labels.splitSerial)}
+# Incremental build — expect this to be FASTER than Task 1.
+${incrementalBuild(labels.splitIncremental)}
 
-# Then: Validate my work, and Did it work.`);
+# Then: Validate my work, and What did it cost.`);
 
 const EXPECTED_MODULES = ["CoreDesignSystem", "CoreModels", "CoreNetworking", "CoreDomain", "CoreImages"];
 
@@ -167,26 +167,27 @@ const validate = async (): Promise<ValidationResult> => {
   });
 
   const clean = await readMeasurement(labels.splitClean);
-  const serial = await readMeasurement(labels.splitSerial);
+  const incremental = await readMeasurement(labels.splitIncremental);
   checks.push({
     label: "Clean build re-measured",
     ok: clean !== null,
     detail: clean ? undefined : `Nothing readable at .workshop/measurements/${labels.splitClean}.json yet.`,
   });
   checks.push({
-    label: "Serial build re-measured",
-    ok: serial !== null,
-    detail: serial
+    label: "Incremental build re-measured",
+    ok: incremental !== null,
+    detail: incremental
       ? undefined
-      : `Nothing readable at .workshop/measurements/${labels.splitSerial}.json yet — ` +
-        `without it you can't say whether the cores woke up.`,
+      : `Nothing readable at .workshop/measurements/${labels.splitIncremental}.json yet — ` +
+        `without it you only see one side of the trade.`,
   });
 
-  const before = await readMeasurement(labels.baselineClean);
-  const report =
-    before && clean
-      ? renderComparison([{ label: "Clean build", before, after: clean }])
-      : undefined;
+  const beforeClean = await readMeasurement(labels.baselineClean);
+  const beforeIncr = await readMeasurement(labels.baselineIncremental);
+  const rows = [];
+  if (beforeClean && clean) rows.push({ label: "Clean build", before: beforeClean, after: clean });
+  if (beforeIncr && incremental) rows.push({ label: "Incremental", before: beforeIncr, after: incremental });
+  const report = rows.length ? renderComparison(rows) : undefined;
 
   return {
     checks,
@@ -195,51 +196,53 @@ const validate = async (): Promise<ValidationResult> => {
   };
 };
 
-/** Their four numbers, read back together. */
-const didItWork = async (): Promise<string> => {
-  const oldParallel = await readMeasurement(labels.baselineClean);
-  const oldSerial = await readMeasurement(labels.serialClean);
-  const newParallel = await readMeasurement(labels.splitClean);
-  const newSerial = await readMeasurement(labels.splitSerial);
+const pct = (before: number, after: number): string => {
+  const delta = (after / before - 1) * 100;
+  const text = `${delta > 0 ? "+" : ""}${delta.toFixed(0)}%`;
+  return delta > 0 ? brand.error(text) : brand.success(text);
+};
 
-  if (!oldParallel || !oldSerial || !newParallel || !newSerial) {
+/** The two sides of the trade, read back together. */
+const didItWork = async (): Promise<string> => {
+  const oldClean = await readMeasurement(labels.baselineClean);
+  const oldIncr = await readMeasurement(labels.baselineIncremental);
+  const newClean = await readMeasurement(labels.splitClean);
+  const newIncr = await readMeasurement(labels.splitIncremental);
+
+  if (!oldClean || !oldIncr || !newClean || !newIncr) {
     return (
       `${brand.bold("Not enough numbers yet.")}\n\n` +
-      `This needs Task 1's clean build, Task 2's serial build, and both of this\n` +
-      `task's measurements. The comparison is the point.`
+      `This needs Task 1's clean and incremental builds, and both of this task's\n` +
+      `measurements. The comparison — two numbers moving opposite ways — is the point.`
     );
   }
 
-  const before = oldSerial.mean / oldParallel.mean;
-  const after = newSerial.mean / newParallel.mean;
-  const saved = oldParallel.mean - newParallel.mean;
-
   const lines = [
-    `${"".padEnd(18)}${"before".padStart(9)}${"after".padStart(11)}`,
-    `${"Clean build".padEnd(18)}${formatDuration(oldParallel.mean).padStart(9)}${formatDuration(newParallel.mean).padStart(11)}`,
-    `${"Serial build".padEnd(18)}${formatDuration(oldSerial.mean).padStart(9)}${formatDuration(newSerial.mean).padStart(11)}`,
-    `${"Parallel speedup".padEnd(18)}${`${before.toFixed(1)}×`.padStart(9)}${`${after.toFixed(1)}×`.padStart(11)}`,
+    `${"".padEnd(16)}${"before".padStart(9)}${"after".padStart(11)}${"".padStart(3)}`,
+    `${"Clean build".padEnd(16)}${formatDuration(oldClean.mean).padStart(9)}${formatDuration(newClean.mean).padStart(11)}   ${pct(oldClean.mean, newClean.mean)}`,
+    `${"Incremental".padEnd(16)}${formatDuration(oldIncr.mean).padStart(9)}${formatDuration(newIncr.mean).padStart(11)}   ${pct(oldIncr.mean, newIncr.mean)}`,
   ];
 
-  const verdict =
-    after < before - 0.3
-      ? `${brand.warn("The speedup went down, and the build got slower.")} That is the expected result,\n` +
-        `and it is worth sitting with for a moment.\n\n` +
-        `Nothing here compiles more slowly than it did. There is exactly as much code\n` +
-        `as this morning. What you added is ${brand.bold("boundaries")}: twelve modules to link, sign\n` +
-        `and embed where there were two — and no parallelism in return, because Xcode\n` +
-        `already compiled the files inside each target at the same time.\n\n` +
-        `${brand.bold("Task 2 told you the graph was the ceiling. Task 2 was wrong, and this is how")}\n` +
-        `${brand.bold("you know.")} If the shape had been the problem, this would have fixed it.\n\n` +
-        `${brand.dim("Keep the number. Task 6 is where you find out what you actually bought.")}`
-      : `${brand.bold("Your numbers moved differently to ours.")} Ours got ~50% slower here, and the\n` +
-        `speedup did not budge.\n\n` +
-        `Worth a look either way: \`tuist graph\` draws the picture. But do not expect\n` +
-        `this task to be the win — it is not, and Task 6 is where the argument lands.`;
+  const asExpected = newClean.mean > oldClean.mean && newIncr.mean < oldIncr.mean;
 
-  return `${lines.join("\n")}\n\n${verdict}\n\n${brand.dim(
-    "This is the shape the talk asks for: no arrows inside a layer, and nothing\nwaiting on work it never needed.",
-  )}`;
+  const verdict = asExpected
+    ? `${brand.bold("Two numbers, opposite directions. That is the trade.")}\n\n` +
+      `The ${brand.bold("clean build got slower")} — a dozen modules to link, sign and embed where\n` +
+      `there were two, and no parallelism in return, because Xcode already compiled the\n` +
+      `files inside each target at the same time. (That is Task 2's point, paid in full:\n` +
+      `the graph was never the ceiling.)\n\n` +
+      `The ${brand.bold("incremental build got faster")} — touch one file and you relink a three-file\n` +
+      `app instead of a ninety-file one. That is the loop you live in all day, and the\n` +
+      `split just shortened it.\n\n` +
+      `${brand.bold("Modularization is a trade, not a win:")} clean-build time for inner-loop time. And\n` +
+      `it buys one thing you cannot see yet — ${brand.bold("granularity")} — which Task 6 spends to win\n` +
+      `the clean build back too. You are not done. You are set up.`
+    : `${brand.bold("Your numbers moved differently to ours.")} We saw the clean build get about half\n` +
+      `again slower and the incremental build get faster — two numbers, opposite ways.\n` +
+      `If yours both moved the same direction, re-measure on a settled machine: this\n` +
+      `trade only shows cleanly when nothing else is fighting for the cores.`;
+
+  return `${lines.join("\n")}\n\n${verdict}`;
 };
 
 export const task04: WorkshopTask = {
@@ -247,7 +250,7 @@ export const task04: WorkshopTask = {
   slug: "split-the-god-module",
   stage: "Stage 03 · The build",
   title: "Split the god module",
-  summary: "Make the build slower on purpose. Collect in Task 6.",
+  summary: "A trade: slower clean build, faster inner loop. Collect in Task 6.",
   brief,
   reveals: [
     {
@@ -267,9 +270,9 @@ export const task04: WorkshopTask = {
     },
     {
       id: "verdict",
-      label: "Did it work?",
-      hint: "Your four numbers, side by side",
-      title: "Did it work?",
+      label: "What did it cost?",
+      hint: "Two numbers, opposite directions",
+      title: "What did it cost?",
       body: "",
       resolve: didItWork,
     },

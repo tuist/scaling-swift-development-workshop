@@ -13,25 +13,36 @@ re-run it, and they refresh. Everything else here is hand-written; edit freely.
 
 ---
 
-## The spine of the day: a regression you make on purpose
+## The spine of the day: a trade you make on purpose
 
 This is the argument the whole day builds. Know it cold before you run this.
 
-| | clean build |
-| --- | --- |
-| Monolith | **14.9s** |
-| Split, no cache | **22.8s** ← +53%, and no extra parallelism |
-| Monolith + module cache | 8.1s |
-| **Split + module cache** | **3.3s** ← 4.5× the monolith |
+| | clean build | incremental |
+| --- | --- | --- |
+| Monolith | **14.9s** | **4.0s** |
+| Split, no cache | **22.8s** ← +53% | **2.6s** ← −35% |
+| Monolith + module cache | 8.1s | — |
+| **Split + module cache** | **3.3s** ← 4.5× the monolith | ~2.9s |
 
-**Task 4 makes the build ~50% slower and the task says so up front.** People will
-ask why. The answer arrives in Task 6: a monolith is *one hash and one cache
-entry*, so any change misses everything. Modules are many hashes, most stay hits,
-and the focused app is the only thing that compiles. The monolith with the same
-cache only reaches 8.1s, because its app target still holds 90 feature files.
+**Task 4 is a two-sided trade, and the task says so up front.** The split makes the
+**clean build slower** (a dozen modules to link, sign, embed; no extra parallelism,
+because Xcode already compiles within a target concurrently) but the **incremental
+build faster** (touch one file → relink a 3-file app, not a 90-file one). So
+modularization isn't free and isn't magic — it spends clean-build time to buy
+inner-loop time.
 
-**The split is not the optimisation. The split is what makes the optimisation
-possible.** That's your "granularity is the whole game" slide, measured.
+**The clean-build cost is what Task 6 pays back.** A monolith is *one hash and one
+cache entry*, so any change misses everything. Modules are many hashes, most stay
+hits, and the focused app is the only thing that compiles. (The monolith with the
+same cache only reaches 8.1s, because its app target still holds 90 feature files.)
+
+**The split is not the clean-build optimisation. The split is what makes the
+optimisation possible.** That's your "granularity is the whole game" slide, measured.
+
+> The incremental numbers (4.0 / 2.6 / 2.9) were measured together on one machine;
+> the clean numbers are from earlier sessions. Quote the **directions and ratios**,
+> not the seconds — and the split→cache incremental (2.6 → 2.9) is a wash, so don't
+> claim the cache speeds the inner loop. It doesn't; the *split* did.
 
 ### Why Task 2 no longer blames the graph
 
@@ -96,7 +107,7 @@ opening for a day about resolution.
 | 1 | Measure the baseline | ✅ solid |
 | 2 | Your cores are idle | ✅ reframed: why more cores won't save you |
 | 3 | Generate it with Tuist | ✅ solid |
-| 4 | Split the god module | ✅ a deliberate regression, paid off in 6 |
+| 4 | Split the god module | ✅ a two-sided trade: slower clean, faster inner loop |
 | 5 | Reuse, don't recompute (compilation cache) | ✅ solid, numbers need re-measuring |
 | 6 | Cache whole modules (module cache) | ✅ the payoff |
 | 7 | Test only what changed | ✅ selective testing + the flaky test |
@@ -147,11 +158,17 @@ is stale.
 | --- | --- |
 | Clean build (monolith) | 14.9s ± 0.9s |
 | Serial (`-jobs 1`) | 44.1s → **2.96×** on 11 cores |
-| No-op build | ~1.9s |
+| **Incremental (monolith)** | **4.0s ± 0.1s** — touch RootView.swift, rebuild |
+| **Incremental (split)** | **2.6s ± 0.1s** — the split's inner-loop win (−35%) |
+| **Incremental (split + cache)** | **~2.9s** — a wash vs the split; cache is for clean builds |
 | Generated (Tuist, monolith) | 16.8s ± 0.5s — not slower than hand-written |
-| Split | 22.8s ± 1.4s — slower on purpose |
+| Split | 22.8s ± 1.4s — clean build slower on purpose |
 | Split + module cache | 3.3s ± 0.04s — the payoff |
 | Monolith + module cache | 8.1s ± 1.4s — the cache alone only gets you here |
+
+> Task 1 now measures a real **incremental build** (edit a file, rebuild), not a
+> no-op. The incremental numbers above were taken together on one machine; treat
+> the split→cache incremental as flat.
 
 **Task 5, the compilation cache** — re-measured on the current sample, against the
 split (which is what they'll be sitting on by then, *not* Task 1's monolith):
@@ -183,9 +200,10 @@ split (which is what they'll be sitting on by then, *not* Task 1's monolith):
    hyperfine. It does not give the command.
 2. **Let them try (10 min).** Resist helping for five. Walk the room and watch for
    who wipes all of DerivedData.
-3. **Hint (5 min).** Teaches the reasoning, not the flags: why a clean build needs
-   `--prepare`, why a no-op needs `--warmup`, and the rule under both — **the
-   first run of anything is a lie**, because it does work the others never repeat.
+3. **Hint (5 min).** Teaches the reasoning, not the flags: the `--prepare` is what
+   decides *which* build you measure — wipe the products → clean build; touch a
+   file → incremental build — and both need `--warmup`, because **the first run of
+   anything is a lie** (it does work the others never repeat).
 4. **Commands + run (~5 min waiting).** Say out loud that the wait *is* the point.
 5. **Validate, then discuss (10 min).**
 
@@ -220,9 +238,11 @@ hyperfine --runs 3 --warmup 1 \
   --export-json .workshop/measurements/baseline-clean-build.json \
   "$BUILD"
 
-# 3. No-op build. No --prepare: nothing to reset. The warmup is what
-#    guarantees the build is already done before the clock starts.
+# 3. Incremental build. --prepare touches one file so each run recompiles it:
+#    the everyday edit-build loop. --warmup builds the tree first, so run 1
+#    is not measuring a real build.
 hyperfine --runs 3 --warmup 1 \
+  --prepare 'touch app/RockyFeed/RootView.swift' \
   --export-json .workshop/measurements/baseline-incremental.json \
   "$BUILD"
 
@@ -260,7 +280,7 @@ Validation catches both and explains them, so you aren't debugging 30 laptops.
 | --- | --- |
 | `hyperfine: command not found` | not in a mise shell — `mise run workshop` handles PATH itself |
 | Benchmark runs, then "cannot write" | `.workshop/measurements/` missing; the runner creates it on launch |
-| Clean build ≈ no-op | `--prepare` isn't removing products |
+| Clean build ≈ incremental | clean build's `--prepare` isn't removing products |
 | Everything 3× your numbers | slower machine — fine, their baseline is theirs |
 
 ### Don't skip
@@ -422,15 +442,27 @@ cd app && tuist install && tuist generate --no-open && open RockyFeed.xcworkspac
 
 ## Task 4 — Split the god module (~45 min)
 
-> *Make the build slower on purpose.*
+> *A trade, not a win — and they see both sides.*
 
-**The task warns them up front that this will cost ~50%, and tells them to measure
-it anyway.** Expect 14.9s → 22.8s and the speedup unmoved (2.96× → 2.93×). That is
-the point: it is the evidence that Task 2's obvious explanation was wrong, and it
-is the bill they collect in Task 6.
+**The task tells them up front it's a two-sided trade, and to measure both.** The
+verdict shows the two numbers moving opposite ways:
 
-Someone will object that this is a bad trade. Good — that objection *is* the
-lesson, and Task 6 answers it. Don't answer it early.
+| | before | after | |
+| --- | --- | --- | --- |
+| **Clean build** | 14.9s | 22.8s | **+53%** — more targets to link/sign/embed, no extra parallelism |
+| **Incremental** | 4.0s | 2.6s | **−35%** — relink a 3-file app, not a 90-file one |
+
+So modularization is a genuine trade: it costs clean-build time and buys inner-loop
+time. Land it like this: *"You made your daily edit-build loop faster and your CI
+slower. The CI cost is what Task 6 pays back — and it can only pay it back because
+you split."*
+
+Someone will object that the clean-build cost is a bad deal. Good — that objection
+*is* the lesson, and Task 6 answers it. Don't answer it early.
+
+> ⚠️ **Don't say the module cache speeds up incremental builds.** It doesn't — the
+> split does (smaller relink). Measured: split→cache incremental is a wash (2.6 →
+> 2.9). The cache's win is the clean build. Keep the two straight.
 
 What else it teaches:
 
@@ -477,7 +509,7 @@ perl -i -pe 's/^import Foundation$/import CoreModels\nimport CoreNetworking\nimp
 # 4. Regenerate.
 cd app && tuist generate --no-open && cd ..
 
-# 5. Measure both. Same commands as before, new export paths.
+# 5. Measure both, the same two shapes as Task 1, new export paths.
 export BUILD="xcodebuild build \
   -workspace app/RockyFeed.xcworkspace \
   -scheme RockyFeed \
@@ -485,17 +517,19 @@ export BUILD="xcodebuild build \
   -derivedDataPath .workshop/DerivedData \
   -quiet"
 
+# Clean build — expect this to be SLOWER than Task 1.
 hyperfine --runs 3 --warmup 1 \
   --prepare 'rm -rf .workshop/DerivedData/Build' \
   --export-json .workshop/measurements/split-clean-build.json \
   "$BUILD"
 
-hyperfine --runs 1 --warmup 1 \
-  --prepare 'rm -rf .workshop/DerivedData/Build' \
-  --export-json .workshop/measurements/split-serial-build.json \
-  "$BUILD -jobs 1"
+# Incremental build — expect this to be FASTER than Task 1.
+hyperfine --runs 3 --warmup 1 \
+  --prepare 'touch app/RockyFeed/RootView.swift' \
+  --export-json .workshop/measurements/split-incremental-build.json \
+  "$BUILD"
 
-# Then: Validate my work, and Did it work.
+# Then: Validate my work, and What did it cost.
 ```
 
 **Show the solved state:**
@@ -671,8 +705,8 @@ on. This is why teams enable a cache, measure nothing, and conclude caching
 doesn't work on iOS.
 
 Verified after the fix: two builds produce an **identical** plist, and the phase
-is **skipped entirely** on a no-op build (it used to run every time — that's part
-of their 2s no-op).
+is **skipped entirely** when the commit hasn't changed (it used to run on every
+build — pure overhead on every incremental they measured in Task 1).
 
 Watch for the trap: declaring `inputPaths`/`outputPaths` achieves **nothing**
 while `basedOnDependencyAnalysis: false` stays. Both, or neither works.
@@ -1279,8 +1313,8 @@ on. This is why teams enable a cache, measure nothing, and conclude caching
 doesn't work on iOS.
 
 Verified after the fix: two builds produce an **identical** plist, and the phase
-is **skipped entirely** on a no-op build (it used to run every time — that's part
-of their 2s no-op).
+is **skipped entirely** when the commit hasn't changed (it used to run on every
+build — pure overhead on every incremental they measured in Task 1).
 
 Watch for the trap: declaring `inputPaths`/`outputPaths` achieves **nothing**
 while `basedOnDependencyAnalysis: false` stays. Both, or neither works.
