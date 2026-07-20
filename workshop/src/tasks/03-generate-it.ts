@@ -11,7 +11,7 @@ import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
 const exists = async (p: string): Promise<boolean> =>
   fs.access(p).then(() => true).catch(() => false);
 
-const brief = `${brand.bold("You cannot fix the graph while the graph lives in a pbxproj.")}
+const brief = `${brand.bold("You won't fix the graph while it lives in a pbxproj.")}
 
 Last task you found the shape of your build is the problem: 2.8× out of ${brand.bold("11")} cores,
 because 82 files sit behind two networking libraries they never use.
@@ -19,11 +19,12 @@ because 82 files sit behind two networking libraries they never use.
 The fix is to split Core into modules. Which sounds like a five-minute job, until
 you remember where the answer to "what modules exist" is currently written down:
 ${brand.accent("RockyFeed.xcodeproj/project.pbxproj")}. Eleven thousand lines of generated XML with
-hex identifiers, checked into git, that two people cannot edit in the same week
-without a merge conflict.
+hex identifiers, checked into git, that two people can barely touch in the same
+week without a merge conflict.
 
-Nobody splits a monolith into six modules by hand in there. That is precisely why
-the monolith is still a monolith.
+Could you split a monolith into six modules by hand in there? Technically, yes.
+But it's slow, error-prone, and so unpleasant that nobody does — which is exactly
+why the monolith is still a monolith.
 
 ${brand.bold("So this task changes nothing about the build. It changes where the project is defined.")}
 

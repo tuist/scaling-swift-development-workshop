@@ -363,7 +363,7 @@ hyperfine --runs 1 --warmup 1 \
 
 ## Task 3 — Generate it with Tuist (~40 min)
 
-> *You cannot fix the graph while the graph lives in a pbxproj.*
+> *You won't fix the graph while it lives in a pbxproj.*
 
 The point is that the `.xcodeproj` becomes a build artefact — generated,
 gitignored, unmergeable-by-nobody. Nothing gets faster, and that's the result.
