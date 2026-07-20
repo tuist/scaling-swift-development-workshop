@@ -268,7 +268,7 @@ const didItWork = async (): Promise<string> => {
 export const task04: WorkshopTask = {
   id: 4,
   slug: "split-the-god-module",
-  stage: "Stage 03 · The build",
+  stage: "The build",
   title: "Split the god module",
   summary: "A trade: slower clean build, faster inner loop. Collect in Task 6.",
   brief,

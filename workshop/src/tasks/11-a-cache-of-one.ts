@@ -155,7 +155,7 @@ ${brand.dim("the case the p99 bar in the talk was warning you about, and this is
 export const task11: WorkshopTask = {
   id: 11,
   slug: "a-cache-of-one",
-  stage: "Stage 05 · The server",
+  stage: "The server",
   title: "A cache of one",
   summary: "Your 3.3s only exists on your laptop. Share it, and prove it.",
   brief,

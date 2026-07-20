@@ -171,7 +171,7 @@ const validate = async (): Promise<ValidationResult> => {
 export const task09: WorkshopTask = {
   id: 9,
   slug: "make-ci-pay",
-  stage: "Stage 06 · CI",
+  stage: "CI",
   title: "Make CI pay for it",
   summary: "Everything you fixed today, you fixed on your laptop. CI arrives empty.",
   brief,

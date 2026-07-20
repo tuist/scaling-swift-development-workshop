@@ -148,7 +148,7 @@ ${brand.dim("Same rule as every task today. Do not trust it. Measure it.")}`;
 export const task12: WorkshopTask = {
   id: 12,
   slug: "ask-it-what-changed",
-  stage: "Stage 05 · The server",
+  stage: "The server",
   title: "Ask it what changed",
   summary: "Point an agent at your build history, and make noticing automatic.",
   brief,

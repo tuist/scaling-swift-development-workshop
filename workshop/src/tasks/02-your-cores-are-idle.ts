@@ -198,7 +198,7 @@ ${brand.dim("not about doing it faster.")}`;
 export const task02: WorkshopTask = {
   id: 2,
   slug: "your-cores-are-idle",
-  stage: "Stage 03 · The build",
+  stage: "The build",
   title: "Your cores are idle",
   summary: "Find out how little of your machine you get, and why more cores will not help.",
   brief,

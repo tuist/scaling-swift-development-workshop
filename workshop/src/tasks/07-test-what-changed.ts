@@ -149,7 +149,7 @@ const validate = async (): Promise<ValidationResult> => {
 export const task07: WorkshopTask = {
   id: 7,
   slug: "test-what-changed",
-  stage: "Stage 04 · The tests",
+  stage: "The tests",
   title: "Test only what changed",
   summary: "Skip the tests whose inputs didn't move — and earn the right to.",
   brief,

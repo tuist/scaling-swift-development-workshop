@@ -199,7 +199,7 @@ ${brand.dim("and that is the thing worth taking home to your own project.")}`;
 export const task06: WorkshopTask = {
   id: 6,
   slug: "cache-whole-modules",
-  stage: "Stage 03 · The build",
+  stage: "The build",
   title: "Cache whole modules",
   summary: "Collect on the slowdown you accepted in Task 4.",
   brief,

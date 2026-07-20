@@ -259,7 +259,7 @@ const verdict = async (): Promise<string> => {
 export const task05: WorkshopTask = {
   id: 5,
   slug: "reuse-dont-recompute",
-  stage: "Stage 03 · The build",
+  stage: "The build",
   title: "Reuse, don't recompute",
   summary: "Turn on Xcode's compilation cache, then find out what it really cost.",
   brief,

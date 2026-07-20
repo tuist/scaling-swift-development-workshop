@@ -173,7 +173,7 @@ ${brand.dim("builds are flowing.")}`;
 export const task10: WorkshopTask = {
   id: 10,
   slug: "nobody-else-can-see-it",
-  stage: "Stage 05 · The server",
+  stage: "The server",
   title: "Nobody else can see it",
   summary: "Your numbers live on one laptop. Put them somewhere the team can see.",
   brief,

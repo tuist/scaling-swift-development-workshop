@@ -849,7 +849,7 @@ git checkout solutions/09
 
 ---
 
-## Stage 05 — the server (Tasks 10–12, ~90 min)
+## The server (Tasks 10–12, ~90 min)
 
 > *Everything so far lives on one laptop.*
 
@@ -1084,7 +1084,7 @@ claude mcp add --transport http tuist https://tuist.dev/mcp
 ## The one thing not built
 
 **Resolution — the SPM registry.** `tuist registry setup` exists and would fit
-naturally in Stage 05 (it's server-backed like everything else there). It's the
+naturally in the server stage (it's server-backed like everything else there). It's the
 last piece of the talk's pipeline with no task.
 
 It is **not** built, and honestly there is nowhere to put it: the day is already
@@ -1352,7 +1352,7 @@ a cold module cache.
 
 ---
 
-## Stage 05 — the server (Tasks 10–12, ~90 min)
+## The server (Tasks 10–12, ~90 min)
 
 > *Everything so far lives on one laptop.*
 
@@ -1464,7 +1464,7 @@ whole day was about.
 ## The one thing not built
 
 **Resolution — the SPM registry.** `tuist registry setup` exists and would fit
-naturally in Stage 05 (it's server-backed like everything else there). It's the
+naturally in the server stage (it's server-backed like everything else there). It's the
 last piece of the talk's pipeline with no task.
 
 It is **not** built, and honestly there is nowhere to put it: the day is already

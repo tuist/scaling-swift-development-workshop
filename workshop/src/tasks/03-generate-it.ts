@@ -214,7 +214,7 @@ const validate = async (): Promise<ValidationResult> => {
 export const task03: WorkshopTask = {
   id: 3,
   slug: "generate-it",
-  stage: "Stage 03 · The build",
+  stage: "The build",
   title: "Generate it with Tuist",
   summary: "Describe the project in Swift so the graph becomes editable.",
   brief,

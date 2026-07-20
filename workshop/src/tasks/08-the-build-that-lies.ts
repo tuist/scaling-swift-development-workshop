@@ -156,7 +156,7 @@ const validate = async (): Promise<ValidationResult> => {
 export const task08: WorkshopTask = {
   id: 8,
   slug: "the-build-that-lies",
-  stage: "Stage 05 · Trust",
+  stage: "Trust",
   title: "The build that lies",
   summary: "Two builds of identical source produce different apps. Find out why.",
   brief,
