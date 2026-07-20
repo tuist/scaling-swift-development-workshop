@@ -60,9 +60,12 @@ const runValidation = async (task: WorkshopTask): Promise<void> => {
   if (passed) {
     await markCompleted(task.id);
     p.log.success(`Task ${task.id} complete.`);
-    const upcoming = nextTask((await loadState()).completed);
+    const upcoming = followingTask(task);
     if (upcoming) {
-      p.log.info(`Next up: ${brand.accent(`${upcoming.id}. ${upcoming.title}`)}`);
+      p.log.info(
+        `Next up: ${brand.accent(`${upcoming.id}. ${upcoming.title}`)} — ` +
+          `pick ${brand.success("Continue")} below.`,
+      );
     } else {
       p.log.info("That's every task written so far. More coming.");
     }
@@ -71,14 +74,44 @@ const runValidation = async (task: WorkshopTask): Promise<void> => {
   }
 };
 
-const showTask = async (task: WorkshopTask): Promise<void> => {
+/** The task immediately after this one in the arc, or null if this is the last. */
+const followingTask = (task: WorkshopTask): WorkshopTask | null =>
+  tasks[tasks.findIndex((candidate) => candidate.id === task.id) + 1] ?? null;
+
+/**
+ * Runs one task's menu.
+ *
+ * Returns the task to open next — the following task when the participant chooses
+ * to continue — or null to go back to the list.
+ */
+const showTask = async (task: WorkshopTask): Promise<WorkshopTask | null> => {
   await markVisited(task.id);
   note(task.brief, briefTitle(task));
 
+  const next = followingTask(task);
+
   for (;;) {
+    const done = (await loadState()).completed.includes(task.id);
+
+    // Once the task passes, offer to move straight on — the whole point of a
+    // linear workshop is that "next" is a first-class step, not a detour through
+    // the list. Shown only after completion so the menu stays focused on doing
+    // the task until it's done.
+    const continueOption =
+      done && next
+        ? [
+            {
+              value: "next",
+              label: `${brand.success("Continue")} to Task ${next.id}: ${next.title}`,
+              hint: "You're done here — keep going",
+            },
+          ]
+        : [];
+
     // Same shape for every option — clack infers the value type from the array,
     // and a mixed shape collapses it to `unknown`.
     const options = [
+      ...continueOption,
       { value: "validate", label: "Validate my work", hint: "Check whether you've done it" },
       ...(task.reveals ?? []).map((reveal) => ({
         value: `reveal:${reveal.id}`,
@@ -97,14 +130,15 @@ const showTask = async (task: WorkshopTask): Promise<void> => {
       { value: "back", label: "Back to the task list", hint: "Pick another task" },
     ];
 
-    // Default to validating. The reveals are there when they're wanted, not
-    // before — you don't learn anything from a command handed to you.
+    // Before the task passes, default to validating — the reveals are there when
+    // they're wanted, not before. After it passes, default to moving on.
     const choice = await p.select({
       message: `Task ${task.id}`,
       options,
-      initialValue: "validate",
+      initialValue: done && next ? "next" : "validate",
     });
-    if (p.isCancel(choice) || choice === "back") return;
+    if (p.isCancel(choice) || choice === "back") return null;
+    if (choice === "next") return next;
 
     if (choice === "brief") {
       note(task.brief, briefTitle(task));
@@ -159,7 +193,11 @@ const main = async (): Promise<void> => {
   for (;;) {
     const task = await chooseTask();
     if (!task) break;
-    await showTask(task);
+    // Stay inside the tasks, following "Continue" straight from one to the next,
+    // until the participant asks to go back to the list.
+    for (let current: WorkshopTask | null = task; current; ) {
+      current = await showTask(current);
+    }
   }
 
   p.outro(
