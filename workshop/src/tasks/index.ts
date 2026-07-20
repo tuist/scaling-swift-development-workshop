@@ -21,7 +21,7 @@ import type { WorkshopTask } from "./types.js";
  *   1. Measure the baseline     you can't improve what you can't see
  *   2. Your cores are idle      2.96x of 11 — and why no arrangement of modules fixes it
  *   3. Generate it with Tuist   move the graph out of a pbxproj and into Swift
- *   4. Split the god module     a trade: clean build slower, inner loop faster
+ *   4. Split the god module     a trade: faster inner loop, a clean-build tax too small to see here
  *   5. Reuse, don't recompute   the compilation cache: fine-grained, per compile job
  *   6. Cache whole modules      the module cache: coarse — and where task 4 gets paid
  *   7. Test only what changed   the same contract, in the test suite
@@ -32,19 +32,20 @@ import type { WorkshopTask } from "./types.js";
  *  12. Ask it what changed      make noticing automatic, because nobody clicks
  *
  * Caching comes *after* modularisation on purpose, and the measurements are why.
- * Splitting the monolith is a two-sided trade, measured: the clean build gets ~53%
- * slower (more targets to link, sign, embed; and no extra parallelism, because
- * Xcode already compiles files inside a target concurrently) while the incremental
- * build gets ~35% faster (touch one file, relink a 3-file app instead of a 90-file
- * one). It buys no *clean-build* speed on its own — what it buys there is
- * granularity, i.e. cacheability, which task 6 spends: 8.1s for the cached monolith
- * against 3.3s for the cached split.
+ * Splitting the monolith is a trade, measured: the incremental build gets ~30%
+ * faster (touch one file, relink a 3-file app instead of a 90-file one), reliably.
+ * The clean build carries a per-module tax (link/sign/embed × a dozen frameworks,
+ * no extra parallelism) — real, but on a sample RockyFeed's size it's about the
+ * size of the measurement noise, so it hides; on a large app it wouldn't. What the
+ * split buys on the clean build is not speed but granularity, i.e. cacheability,
+ * which task 6 spends: 8.1s for the cached monolith against 3.3s for the cached
+ * split.
  *
  * Tasks 10 to 12 are where the day stops being about one laptop. Every measurement
  * up to here was taken by hand, once, by one person — which is exactly the habit
  * that let the build get slow in the first place. The server half makes the
  * numbers keep arriving without anyone remembering to take them, and it is where
- * task 4's deliberate regression finally pays for the whole team rather than just
+ * task 4's split finally pays for the whole team rather than just
  * for you: a monolith is one hash and one cache entry, so a shared cache of it is
  * a shared cache of nothing.
  *

@@ -130,15 +130,15 @@ Not you. You already had those binaries. It is for:
   ${brand.dim("·")} you, next week, after you cleared your caches chasing something else
 
 ${brand.bold("This is where task 4 finally gets paid.")}
-You made the clean build ${brand.bold("53% slower")} by splitting the monolith, and it has been
-sitting there as a debt since. Here is the settlement: a monolith is one module,
-so it is one cache entry, so it is one hash. Change anything and the whole thing
-misses — for everyone, on every machine, forever. Fifteen modules means fifteen
-hashes, and a change to one leaves fourteen valid.
+Splitting the monolith bought you a faster inner loop and cost you a per-module tax
+on the clean build — too small to see at this scale, but real. Here is what it was
+really for: a monolith is one module, so it is one cache entry, so it is one hash.
+Change anything and the whole thing misses — for everyone, on every machine,
+forever. Fifteen modules means fifteen hashes, and a change to one leaves fourteen
+valid.
 
 Cached monolith: ${brand.bold("8.1s")}. Cached split: ${brand.bold("3.3s")}. The split was never the
-optimisation. It was what made the optimisation possible, and it was worth being
-slower for a day to get.
+optimisation. It was what made the optimisation possible.
 
 ${brand.bold("The other cache is still yours alone")}
 Xcode's compilation cache (task 5) is per compile job, and there are thousands of

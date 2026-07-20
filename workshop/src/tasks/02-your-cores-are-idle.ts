@@ -176,8 +176,8 @@ gap this size.
 
 ${brand.dim("We know it is wrong because we tried it. Splitting Core into twelve modules")}
 ${brand.dim("later in this workshop moves the speedup from 2.96x to 2.93x — that is, not at")}
-${brand.dim("all — and makes the clean build 53% slower. If the graph were the ceiling, that")}
-${brand.dim("would have fixed it. It did not.")}
+${brand.dim("all. If the graph were the ceiling, splitting it would have raised the ceiling.")}
+${brand.dim("It did not.")}
 
 ${brand.bold("So what is the ceiling?")}
 Swift compilation itself. Type-checking, module emission, linking — work that does

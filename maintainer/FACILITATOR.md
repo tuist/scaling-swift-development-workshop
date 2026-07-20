@@ -16,33 +16,41 @@ re-run it, and they refresh. Everything else here is hand-written; edit freely.
 ## The spine of the day: a trade you make on purpose
 
 This is the argument the whole day builds. Know it cold before you run this.
+Measured together in one quiet pass (M3 Pro, 11 cores):
 
 | | clean build | incremental |
 | --- | --- | --- |
-| Monolith | **14.9s** | **4.0s** |
-| Split, no cache | **22.8s** ← +53% | **2.6s** ← −35% |
-| Monolith + module cache | 8.1s | — |
-| **Split + module cache** | **3.3s** ← 4.5× the monolith | ~2.9s |
+| Monolith | ~15–19s | **3.4s** |
+| Split, no cache | **17.6s** ← ≈ flat | **2.6s** ← −24% |
+| **Split + module cache** | **3.2s** ← ~5–6× the uncached build | ~2.9s |
 
-**Task 4 is a two-sided trade, and the task says so up front.** The split makes the
-**clean build slower** (a dozen modules to link, sign, embed; no extra parallelism,
-because Xcode already compiles within a target concurrently) but the **incremental
-build faster** (touch one file → relink a 3-file app, not a 90-file one). So
-modularization isn't free and isn't magic — it spends clean-build time to buy
-inner-loop time.
+**Task 4 is a trade, and the trade is the lesson — but be honest about which side
+reproduces.** Two things hold every time you measure them:
 
-**The clean-build cost is what Task 6 pays back.** A monolith is *one hash and one
-cache entry*, so any change misses everything. Modules are many hashes, most stay
-hits, and the focused app is the only thing that compiles. (The monolith with the
-same cache only reaches 8.1s, because its app target still holds 90 feature files.)
+- **The incremental build gets faster** (3.4s → 2.6s). Touch one file, relink a
+  3-file app instead of a 90-file one. This is the reliable, felt-every-day win.
+- **The module cache is the payoff** (3.2s — ~5–6× the uncached clean build, and
+  the monolith even *with* a cache only reaches 8.1s because its app is one 90-file
+  cache entry).
+
+The clean-build **cost** of splitting is real in principle — a dozen frameworks to
+link, sign, embed, and no extra parallelism — but on a codebase RockyFeed's size it
+is about the size of the measurement noise, so it hides. Across sessions the
+monolith clean has run 14.9–18.8s and the split 17.6–22.8s: **overlapping ranges.**
+Do **not** promise the room a "+53% regression" — it won't reliably show. Say the
+true thing: *the tax scales with the graph, and this graph is tiny; on a real app
+you'd feel it.*
 
 **The split is not the clean-build optimisation. The split is what makes the
-optimisation possible.** That's your "granularity is the whole game" slide, measured.
+optimisation possible.** That's your "granularity is the whole game" slide — and the
+honest version is stronger than a manufactured regression: modularization costs you
+something small now, buys a faster inner loop now, and unlocks a cache that later
+makes the clean build fall off a cliff.
 
-> The incremental numbers (4.0 / 2.6 / 2.9) were measured together on one machine;
-> the clean numbers are from earlier sessions. Quote the **directions and ratios**,
-> not the seconds — and the split→cache incremental (2.6 → 2.9) is a wash, so don't
-> claim the cache speeds the inner loop. It doesn't; the *split* did.
+> Quote **directions and ratios**, never seconds — absolute numbers swing 20–30%
+> with machine state. The split→cache incremental (2.6 → 2.9) is a wash: the cache
+> does **not** speed the inner loop, the *split* did. The one rock-solid number is
+> the cached split (~3.2s).
 
 ### Why Task 2 no longer blames the graph
 
@@ -107,7 +115,7 @@ opening for a day about resolution.
 | 1 | Measure the baseline | ✅ solid |
 | 2 | Your cores are idle | ✅ reframed: why more cores won't save you |
 | 3 | Generate it with Tuist | ✅ solid |
-| 4 | Split the god module | ✅ a two-sided trade: slower clean, faster inner loop |
+| 4 | Split the god module | ✅ a trade: faster inner loop, clean-build tax too small to see here |
 | 5 | Reuse, don't recompute (compilation cache) | ✅ solid, numbers need re-measuring |
 | 6 | Cache whole modules (module cache) | ✅ the payoff |
 | 7 | Test only what changed | ✅ selective testing + the flaky test |
@@ -115,7 +123,7 @@ opening for a day about resolution.
 | 9 | Make CI pay for it | ✅ the capstone — nothing to measure, on purpose |
 
 Rough shape of the day: **1–2 before the first break** (measure, and find the
-ceiling), **3–4 to lunch** (generate, then make it worse on purpose), **5–6 after**
+ceiling), **3–4 to lunch** (generate, then split — a trade, not a regression), **5–6 after**
 (the payoff), **7–9 to close** (the same sentence, three more times).
 
 Rhythm per task: **brief → let them struggle → hint → commands → discuss.** The
@@ -154,17 +162,24 @@ overwritten.
 Measured **after** the sample reshape. Anything you remember from earlier drafts
 is stale.
 
+Clean-build numbers **swing 20–30% with machine state** — quote ratios, not
+seconds. The incrementals and the cached split are the stable ones.
+
 | | |
 | --- | --- |
-| Clean build (monolith) | 14.9s ± 0.9s |
-| Serial (`-jobs 1`) | 44.1s → **2.96×** on 11 cores |
-| **Incremental (monolith)** | **4.0s ± 0.1s** — touch RootView.swift, rebuild |
-| **Incremental (split)** | **2.6s ± 0.1s** — the split's inner-loop win (−35%) |
+| **Incremental (monolith)** | **3.4–4.0s** — touch RootView.swift, rebuild |
+| **Incremental (split)** | **2.6s ± 0.1s** — the split's inner-loop win (~−25 to −35%) |
 | **Incremental (split + cache)** | **~2.9s** — a wash vs the split; cache is for clean builds |
-| Generated (Tuist, monolith) | 16.8s ± 0.5s — not slower than hand-written |
-| Split | 22.8s ± 1.4s — clean build slower on purpose |
-| Split + module cache | 3.3s ± 0.04s — the payoff |
-| Monolith + module cache | 8.1s ± 1.4s — the cache alone only gets you here |
+| **Split + module cache (clean)** | **3.2s ± 0.06s** — the payoff, rock-solid |
+| Clean build (monolith) | 14.9–18.8s across sessions — noisy |
+| Clean build (split) | 17.6–22.8s across sessions — noisy; **overlaps the monolith** |
+| Serial (`-jobs 1`, monolith) | 44.1s → **2.96×** on 11 cores |
+| Generated (Tuist, monolith) | ~16.8s — not slower than hand-written |
+| Monolith + module cache | 8.1s — the cache alone only gets you here (90-file app) |
+
+> The split's clean-build "regression" is inside the session-to-session noise on
+> this sample. Don't present it as a crisp number. The trade is: reliable inner-loop
+> win + cacheability, for a clean-build tax that's real but too small to see here.
 
 > Task 1 now measures a real **incremental build** (edit a file, rebuild), not a
 > no-op. The incremental numbers above were taken together on one machine; treat
@@ -449,8 +464,8 @@ verdict shows the two numbers moving opposite ways:
 
 | | before | after | |
 | --- | --- | --- | --- |
-| **Clean build** | 14.9s | 22.8s | **+53%** — more targets to link/sign/embed, no extra parallelism |
-| **Incremental** | 4.0s | 2.6s | **−35%** — relink a 3-file app, not a 90-file one |
+| **Clean build** | ~15–19s | ~17–23s | **≈ flat** — per-module tax, lost in noise at this scale |
+| **Incremental** | 3.4s | 2.6s | **−24%** — relink a 3-file app, not a 90-file one |
 
 So modularization is a genuine trade: it costs clean-build time and buys inner-loop
 time. Land it like this: *"You made your daily edit-build loop faster and your CI
@@ -572,8 +587,8 @@ the day has been building to:
 > file and *all* of it misses. Fifteen modules is fifteen hashes — change one and
 > fourteen are still good. **Task 4 didn't make you faster. It made you cacheable.**"
 
-That's where the 53% regression from Task 4 gets paid, and it's the moment to say
-out loud that you had them make it worse on purpose.
+That's where the split from Task 4 finally pays off, and it's the moment to say
+out loud that the split's clean-build cost was a bet on this exact payoff.
 
 **⚠️ The sharp edge — do not skip it.** Changing `CoreNetworking` misses **8 of 15**
 targets, because everything routes through `CoreDomain`. They split the god module
@@ -958,7 +973,7 @@ tuist cache                      # 11 remote hits, 0 local, 4 misses
 **6s to pull what costs ~20s to build.** Alamofire and Kingfisher stay misses —
 external packages cache separately. 11 of 15 is the win.
 
-Then land it: *cached monolith 8.1s, cached split 3.3s.* **This is where the 53%
+Then land it: *cached monolith 8.1s, cached split 3.3s.* **This is where the split
 regression from Task 4 gets paid** — a monolith is one hash, so a shared cache of
 it is a shared cache of nothing.
 
@@ -1097,10 +1112,10 @@ to lose:
    the natural pressure valve: it's the one stage that can't fall back to local,
    and you'd recover a full hour.
 3. **Task 2 (25 min)** could be folded into Task 1's discussion — but it's what
-   makes Task 4's "we made it slower on purpose" land honestly, so cut it last.
+   makes Task 4's trade land honestly (the inner-loop win needs the split), so cut it last.
 
 **Do not cut Task 6.** The whole morning is a setup for it, and Task 4 is a
-deliberate regression that goes unpaid without it.
+trade whose cache payoff goes uncollected without it.
 
 
  app/RockyFeed | while read -r f; do
@@ -1266,8 +1281,8 @@ the day has been building to:
 > file and *all* of it misses. Fifteen modules is fifteen hashes — change one and
 > fourteen are still good. **Task 4 didn't make you faster. It made you cacheable.**"
 
-That's where the 53% regression from Task 4 gets paid, and it's the moment to say
-out loud that you had them make it worse on purpose.
+That's where the split from Task 4 finally pays off, and it's the moment to say
+out loud that the split's clean-build cost was a bet on this exact payoff.
 
 **⚠️ The sharp edge — do not skip it.** Changing `CoreNetworking` misses **8 of 15**
 targets, because everything routes through `CoreDomain`. They split the god module
@@ -1411,7 +1426,7 @@ tuist cache                      # 11 remote hits, 0 local, 4 misses
 **6s to pull what costs ~20s to build.** Alamofire and Kingfisher stay misses —
 external packages cache separately. 11 of 15 is the win.
 
-Then land it: *cached monolith 8.1s, cached split 3.3s.* **This is where the 53%
+Then land it: *cached monolith 8.1s, cached split 3.3s.* **This is where the split
 regression from Task 4 gets paid** — a monolith is one hash, so a shared cache of
 it is a shared cache of nothing.
 
@@ -1477,9 +1492,9 @@ to lose:
    the natural pressure valve: it's the one stage that can't fall back to local,
    and you'd recover a full hour.
 3. **Task 2 (25 min)** could be folded into Task 1's discussion — but it's what
-   makes Task 4's "we made it slower on purpose" land honestly, so cut it last.
+   makes Task 4's trade land honestly (the inner-loop win needs the split), so cut it last.
 
 **Do not cut Task 6.** The whole morning is a setup for it, and Task 4 is a
-deliberate regression that goes unpaid without it.
+trade whose cache payoff goes uncollected without it.
 
 

@@ -163,19 +163,19 @@ const wasItWorthIt = async (): Promise<string> => {
   return `${brand.bold("Your day, in three numbers")}
 
   ${"Monolith".padEnd(24)} ${formatDuration(baseline.mean)}
-  ${"Split, no cache".padEnd(24)} ${brand.error(formatDuration(split.mean))}   ${brand.dim(`← ${worse > 0 ? "+" : ""}${worse.toFixed(0)}% on the clean build`)}
+  ${"Split, no cache".padEnd(24)} ${formatDuration(split.mean)}   ${brand.dim(`← ${Math.abs(worse) < 15 ? "about the same" : `${worse > 0 ? "+" : ""}${worse.toFixed(0)}%`} on the clean build`)}
   ${"Split + module cache".padEnd(24)} ${brand.success(formatDuration(cached.mean))}   ${brand.dim(`← ${better.toFixed(1)}× the monolith`)}
 
 ${brand.bold("So: was splitting it worth it?")}
 
-Task 4 already showed one side of the answer: the split made your ${brand.bold("clean")} build
-slower but your ${brand.bold("incremental")} build faster. A real trade — but the clean build is
-what CI pays on every run, so on that number, at task 4, you were still down.
+Task 4 showed the near side of the answer: the split made your ${brand.bold("incremental")} build
+faster, and left your ${brand.bold("clean")} build about where it started — a per-module tax too
+small to see at this scale. On CI, at task 4, you had not won anything yet.
 
-This is where the other side arrives. What splitting really bought was
-${brand.bold("granularity")}. A monolith is one hash and one cache entry: change any file and the
-whole thing misses. Modules are many hashes, so most of them stay hits, and the
-app you are focused on is the only thing that compiles.
+This is where the other side arrives, and it is not small. What splitting really
+bought was ${brand.bold("granularity")}. A monolith is one hash and one cache entry: change any
+file and the whole thing misses. Modules are many hashes, so most of them stay
+hits, and the app you are focused on is the only thing that compiles.
 
 That is why the clean build just fell off a cliff — and why it could not have,
 before you split.

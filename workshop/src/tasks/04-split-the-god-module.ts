@@ -23,18 +23,24 @@ rebuild), the same two you took in Task 1:
   ${brand.accent(labels.splitClean)}${brand.dim(".json")}
   ${brand.accent(labels.splitIncremental)}${brand.dim(".json")}
 
-${brand.bold("Fair warning: this is a trade, not a win — and you will see both sides.")}
-Your ${brand.bold("clean build gets slower")}, about half again: there are a dozen modules to link,
-sign and embed now where there were two, and no parallelism in return (Task 2
-already showed the cores were never the ceiling).
+${brand.bold("Fair warning: this is a trade, not a free win.")}
+Your ${brand.bold("incremental build gets faster")} — touch one file and you relink a three-file
+app, not a ninety-file monolith. That is the loop you live in all day, and it is
+the reliable win here.
 
-But your ${brand.bold("incremental build gets faster")}: touch one file and you relink a three-file
-app, not a ninety-file monolith. That is the loop you live in all day.
+Your ${brand.bold("clean build")} carries a cost you should understand even though you may barely
+see it: a dozen modules now have to be linked, signed and embedded where two did,
+and you get no parallelism in return (Task 2 showed the cores were never the
+ceiling). On a codebase RockyFeed's size that overhead is small enough to hide in
+the measurement noise — your clean build may come out flat, up a little, or even
+down. ${brand.bold("The cost is real; it just scales with the graph, and this graph is small.")}
+On a real app, with real modules, you would feel it.
 
-${brand.dim("So modularization is not free and it is not magic. It spends clean-build time to")}
-${brand.dim("buy inner-loop time — and it buys one more thing you cannot see yet, granularity,")}
-${brand.dim("which Task 6 spends to win the clean build back too. Measure it anyway: a task")}
-${brand.dim("that only ever shows you wins is a sales pitch, not a workshop.")}
+${brand.dim("So modularization is not free and it is not magic. You pay a per-module tax on")}
+${brand.dim("the clean build — invisible at this scale, real at a larger one — and you buy a")}
+${brand.dim("faster inner loop plus the thing you cannot see yet: granularity, which Task 6")}
+${brand.dim("spends to make the clean build fall off a cliff. Measure it anyway: a task that")}
+${brand.dim("only ever shows you wins is a sales pitch, not a workshop.")}
 
 ${brand.bold("Do this bit yourself before taking the hint.")} Open Core, look at what is actually
 in it, and sketch the layers on paper. There is one file in there that will fight
@@ -223,24 +229,38 @@ const didItWork = async (): Promise<string> => {
     `${"Incremental".padEnd(16)}${formatDuration(oldIncr.mean).padStart(9)}${formatDuration(newIncr.mean).padStart(11)}   ${pct(oldIncr.mean, newIncr.mean)}`,
   ];
 
-  const asExpected = newClean.mean > oldClean.mean && newIncr.mean < oldIncr.mean;
+  const incrFaster = newIncr.mean < oldIncr.mean;
+  const cleanDelta = (newClean.mean / oldClean.mean - 1) * 100;
 
-  const verdict = asExpected
-    ? `${brand.bold("Two numbers, opposite directions. That is the trade.")}\n\n` +
-      `The ${brand.bold("clean build got slower")} — a dozen modules to link, sign and embed where\n` +
-      `there were two, and no parallelism in return, because Xcode already compiled the\n` +
-      `files inside each target at the same time. (That is Task 2's point, paid in full:\n` +
-      `the graph was never the ceiling.)\n\n` +
-      `The ${brand.bold("incremental build got faster")} — touch one file and you relink a three-file\n` +
-      `app instead of a ninety-file one. That is the loop you live in all day, and the\n` +
-      `split just shortened it.\n\n` +
-      `${brand.bold("Modularization is a trade, not a win:")} clean-build time for inner-loop time. And\n` +
-      `it buys one thing you cannot see yet — ${brand.bold("granularity")} — which Task 6 spends to win\n` +
-      `the clean build back too. You are not done. You are set up.`
-    : `${brand.bold("Your numbers moved differently to ours.")} We saw the clean build get about half\n` +
-      `again slower and the incremental build get faster — two numbers, opposite ways.\n` +
-      `If yours both moved the same direction, re-measure on a settled machine: this\n` +
-      `trade only shows cleanly when nothing else is fighting for the cores.`;
+  const cleanReading =
+    Math.abs(cleanDelta) < 15
+      ? `Your ${brand.bold("clean build barely moved")} (${pct(oldClean.mean, newClean.mean)}), and that is the honest result at\n` +
+        `this scale. Splitting adds a per-module tax — a dozen frameworks to link, sign\n` +
+        `and embed — but on a codebase this small that cost is about the size of the\n` +
+        `measurement noise, so it hides. It is real; it just scales with the graph, and\n` +
+        `this graph is tiny. On a real app you would see it clearly.`
+      : cleanDelta >= 15
+        ? `Your ${brand.bold("clean build got slower")} (${pct(oldClean.mean, newClean.mean)}) — the per-module tax showing through:\n` +
+          `a dozen frameworks to link, sign and embed where there were two, and no\n` +
+          `parallelism in return. That is the cost side of the trade, and it scales with\n` +
+          `the graph.`
+        : `Your ${brand.bold("clean build came out faster")} (${pct(oldClean.mean, newClean.mean)}), which at this scale is noise, not a\n` +
+          `real win — the per-module link/sign/embed cost is smaller than the spread here.\n` +
+          `Do not bank it. The cost is real on a larger graph.`;
+
+  const verdict = incrFaster
+    ? `${brand.bold("The reliable win: your incremental build got faster")} (${pct(oldIncr.mean, newIncr.mean)}). Touch one\n` +
+      `file and you relink a three-file app, not a ninety-file monolith. That is the\n` +
+      `loop you live in all day, and the split just shortened it.\n\n` +
+      `${cleanReading}\n\n` +
+      `${brand.bold("So modularization is a trade, not a free win:")} a clean-build tax that scales with\n` +
+      `the graph, for a faster inner loop now — and the thing you cannot see yet,\n` +
+      `${brand.bold("granularity")}, which Task 6 spends to make the clean build fall off a cliff. You\n` +
+      `are not done. You are set up.`
+    : `${brand.bold("Your incremental build did not get faster, which is unusual.")} We see the split\n` +
+      `relink a much smaller app and win there every time. If it went the other way,\n` +
+      `re-measure on a settled machine — the inner-loop win is the one number here that\n` +
+      `should reproduce.\n\n${cleanReading}`;
 
   return `${lines.join("\n")}\n\n${verdict}`;
 };
