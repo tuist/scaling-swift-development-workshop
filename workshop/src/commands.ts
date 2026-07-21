@@ -23,6 +23,11 @@ const project = rel(paths.xcodeproj);
 const workspace = rel(paths.xcworkspace);
 const derivedData = rel(paths.derivedData);
 const cas = rel(paths.compilationCache);
+// The CAS path handed to xcodebuild must be ABSOLUTE. The compilation cache
+// resolves it per compile job, from a working directory that is not yours, so a
+// relative path silently resolves to the wrong place and the cache never hits.
+// $(pwd) is app/ (where these run), so this lands at the same directory as `cas`.
+const casAbsolute = `$(pwd)/${cas}`;
 const measurements = rel(paths.measurementsDir);
 
 const exportPath = (label: string): string => `${measurements}/${label}.json`;
@@ -45,7 +50,7 @@ const commonArgs = `${destAndDerived} \\
  * workshop's cache out of the caches your real work depends on.
  */
 const cachedArgs = `${destAndDerived} \\
-  COMPILATION_CACHE_CAS_PATH=${cas} \\
+  COMPILATION_CACHE_CAS_PATH=${casAbsolute} \\
   -quiet`;
 
 /**

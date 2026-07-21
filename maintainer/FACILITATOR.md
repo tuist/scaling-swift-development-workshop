@@ -907,7 +907,7 @@ export BUILD="xcodebuild build \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
   -derivedDataPath ../.workshop/DerivedData \
-  COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex \
+  COMPILATION_CACHE_CAS_PATH=$(pwd)/../.workshop/CompilationCache.noindex \
   -quiet"
 
 # 1. Clean build with the cache warm.
@@ -1023,7 +1023,7 @@ export BUILD="xcodebuild build \
   -scheme RockyFeed \
   -destination 'generic/platform=iOS Simulator' \
   -derivedDataPath ../.workshop/DerivedData \
-  COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex \
+  COMPILATION_CACHE_CAS_PATH=$(pwd)/../.workshop/CompilationCache.noindex \
   -quiet"
 
 hyperfine --runs 3 --warmup 1 \

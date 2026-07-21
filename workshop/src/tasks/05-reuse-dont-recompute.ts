@@ -77,11 +77,13 @@ small half of the build.
 
 ${brand.bold("Measuring it")}
 Same clean-build shape as task 4, with ${brand.bold("one")} addition to the ${brand.dim("$BUILD")} command:
-${brand.accent("COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex")}. That points the
-cache at the workshop's own directory rather than Xcode's global one — so it
-touches none of your real caches, and so you can throw it away on purpose in a
-moment. It did nothing in the earlier tasks (the setting was off), which is why
-it wasn't there. Now it matters.
+${brand.accent("COMPILATION_CACHE_CAS_PATH=$(pwd)/../.workshop/CompilationCache.noindex")}. It must be an
+${brand.bold("absolute")} path — the cache resolves it per compile job, from a working directory
+that is not yours, so a relative one silently resolves wrong and never hits.
+${brand.dim("$(pwd)")} is app/, so this still lands in the workshop's own directory rather than
+Xcode's global one — it touches none of your real caches, and you can throw it away
+on purpose in a moment. It did nothing in the earlier tasks (the setting was off),
+which is why it wasn't there. Now it matters.
 
 ${brand.bold("For the cold number")}, you need a run where the cache is empty ${brand.bold("and")} the products
 are gone — which is exactly why the cache lives under ${brand.accent(".workshop/")}: you can
