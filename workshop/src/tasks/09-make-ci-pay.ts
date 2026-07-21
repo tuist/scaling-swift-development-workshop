@@ -22,8 +22,10 @@ runner what your laptop has:
 
   ${brand.dim("·")} the tooling, without installing it from scratch every run
   ${brand.dim("·")} the resolved packages
-  ${brand.dim("·")} the module cache from task 6
   ${brand.dim("·")} only the tests that need running, from task 7
+
+${brand.dim("The module cache is the one thing a GitHub cache cannot hand the runner — that")}
+${brand.dim("needs Tuist's remote cache, which you wire up in task 10.")}
 
 ${brand.bold("And then the part people skip:")} make the run ${brand.bold("tell you")} whether the cache hit.
 A pipeline that silently misses is a pipeline that has been made slower by every
@@ -38,7 +40,6 @@ changes when the contents should:
 
   ${brand.dim("mise")}          key on mise.toml — tooling changes rarely, so this hits nearly always
   ${brand.dim("packages")}      key on Tuist/Package.resolved
-  ${brand.dim("module cache")}  Tuist handles the hashing; you cache its store
 
 ${brand.bold("The keys are the whole game")}
 Key on something too broad — ${brand.dim("hashFiles('**/*')")}, the commit SHA — and you miss on
@@ -70,7 +71,7 @@ const commands = shell(`# There is nothing to run here, so nothing to paste. Thi
 #
 # jobs:
 #   build:
-#     runs-on: macos-15
+#     runs-on: macos-latest
 #     steps:
 #       - uses: actions/checkout@v4
 #
@@ -88,17 +89,12 @@ const commands = shell(`# There is nothing to run here, so nothing to paste. Thi
 #           path: app/Tuist/.build
 #           key: spm-\${{ hashFiles('app/Tuist/Package.resolved') }}
 #
-#       # 3. The module cache from task 6.
-#       - uses: actions/cache@v4
-#         id: tuist-cache
-#         with:
-#           path: ~/.cache/tuist
-#           key: tuist-\${{ hashFiles('app/Project.swift', 'app/Core/**', 'app/RockyFeed/**') }}
-#           restore-keys: tuist-
+#       # 3. Say whether the cache hit. Out loud, every run.
+#       - run: echo "tooling cache hit: \${{ steps.mise-cache.outputs.cache-hit }}"
 #
-#       # 4. Say whether it hit. Out loud, every run.
-#       - run: echo "module cache hit: \${{ steps.tuist-cache.outputs.cache-hit }}"
-#
+#       # NOTE: you do NOT store the module cache (~/.cache/tuist) with a GitHub
+#       # Actions cache. It reaches CI through Tuist's remote cache, which you wire
+#       # up in Task 10 — after that, tuist cache below pulls modules from it.
 #       - run: cd app && tuist install && tuist cache
 #       - run: cd app && tuist test    # only what changed, from task 7
 
