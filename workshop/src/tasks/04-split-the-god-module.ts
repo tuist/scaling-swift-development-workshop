@@ -104,8 +104,8 @@ but not while you're trying to measure one thing at a time.)
 
 ${brand.bold("The imports change")}
 ${brand.dim("import Core")} stops existing. Every file that used it needs the modules it actually
-uses. The commands reveal has a sed for the app; four files inside Core need a
-line each.`;
+uses. The commands reveal rewrites the app and its tests; four files inside Core
+need a line each.`;
 
 const commands = shell(`# Run from app/, one at a time.
 
@@ -126,6 +126,12 @@ done
 perl -i -pe 's/^import Domain$/import Domain\\nimport Images/' \\
   RockyFeed/Features/Player/PlayerView.swift \\
   RockyFeed/Features/Profile/ProfileView.swift
+#    The tests are a sibling directory the RockyFeed grep never reaches. They need
+#    the same fix, and the test target depends on Domain, Images and Models (not
+#    DesignSystem), so its files get those three:
+grep -rl '^import Core$' RockyFeedTests | while read -r f; do
+  perl -i -pe 's/^import Core$/import Domain\\nimport Images\\nimport Models/' "$f"
+done
 
 # 3. Four files inside Core now cross a module boundary.
 perl -i -pe 's/^import SwiftUI$/import DesignSystem\\nimport SwiftUI/' \\

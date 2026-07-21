@@ -596,6 +596,12 @@ done
 perl -i -pe 's/^import Domain$/import Domain\nimport Images/' \
   RockyFeed/Features/Player/PlayerView.swift \
   RockyFeed/Features/Profile/ProfileView.swift
+#    The tests are a sibling directory the RockyFeed grep never reaches. They need
+#    the same fix, and the test target depends on Domain, Images and Models (not
+#    DesignSystem), so its files get those three:
+grep -rl '^import Core$' RockyFeedTests | while read -r f; do
+  perl -i -pe 's/^import Core$/import Domain\nimport Images\nimport Models/' "$f"
+done
 
 # 3. Four files inside Core now cross a module boundary.
 perl -i -pe 's/^import SwiftUI$/import DesignSystem\nimport SwiftUI/' \
