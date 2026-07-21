@@ -393,7 +393,42 @@ deps to be Tuist's, not Xcode's. One new idea per task; don't introduce it early
 #    Alamofire and Kingfisher declared as SwiftPM packages right in the manifest.
 #    It is ~80 lines, so take it verbatim rather than typing it. Open it and read
 #    it — the packages: block and the .package(product:) references are the point.
-cat > Project.swift <<'PROJECT_SWIFT'
+# Create Project.swift — full contents below.
+
+# 2. Mark the Tuist root. One line.
+# Create Tuist.swift — full contents below.
+
+# 3. Core stops being its own SwiftPM package — it is a Tuist target now.
+git rm --cached Core/Package.swift Core/Package.resolved
+rm -f Core/Package.swift Core/Package.resolved
+
+# 4. Generate. No tuist install: the packages are Xcode-native SPM, resolved at
+#    build time. (tuist install arrives in Task 6, with the module cache.)
+tuist generate --no-open
+
+# 5. The checked-in project becomes a build artefact. Merge conflicts stop here.
+git rm -r --cached RockyFeed.xcodeproj
+printf 'app/*.xcodeproj\napp/*.xcworkspace\napp/Derived/\n' >> ../.gitignore  # the repo-root ignore
+
+# 6. Re-measure. Note the -workspace (see the hint).
+export BUILD="xcodebuild build \
+  -workspace RockyFeed.xcworkspace \
+  -scheme RockyFeed \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath ../.workshop/DerivedData \
+  -quiet"
+
+hyperfine --runs 3 --warmup 1 \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/generated-clean-build.json \
+  "$BUILD"
+
+# Then: Validate my work.
+```
+
+**`Project.swift`** — type this out:
+
+```swift
 import ProjectDescription
 
 // RockyFeed, described in Swift instead of stored in a pbxproj.
@@ -466,41 +501,14 @@ let project = Project(
         ),
     ]
 )
-PROJECT_SWIFT
+```
 
-# 2. Mark the Tuist root. One line.
-cat > Tuist.swift <<'SWIFT'
+**`Tuist.swift`** — type this out:
+
+```swift
 import ProjectDescription
 
 let tuist = Tuist()
-SWIFT
-
-# 3. Core stops being its own SwiftPM package — it is a Tuist target now.
-git rm --cached Core/Package.swift Core/Package.resolved
-rm -f Core/Package.swift Core/Package.resolved
-
-# 4. Generate. No tuist install: the packages are Xcode-native SPM, resolved at
-#    build time. (tuist install arrives in Task 6, with the module cache.)
-tuist generate --no-open
-
-# 5. The checked-in project becomes a build artefact. Merge conflicts stop here.
-git rm -r --cached RockyFeed.xcodeproj
-printf 'app/*.xcodeproj\napp/*.xcworkspace\napp/Derived/\n' >> ../.gitignore  # the repo-root ignore
-
-# 6. Re-measure. Note the -workspace (see the hint).
-export BUILD="xcodebuild build \
-  -workspace RockyFeed.xcworkspace \
-  -scheme RockyFeed \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath ../.workshop/DerivedData \
-  -quiet"
-
-hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
-  --export-json ../.workshop/measurements/generated-clean-build.json \
-  "$BUILD"
-
-# Then: Validate my work.
 ```
 
 **Show the solved state:**
@@ -564,7 +572,52 @@ What else it teaches:
 
 # 1. The split manifest. Take it verbatim — the layering is the lesson,
 #    and typing five .target(...) blocks is not.
-cat > Project.swift <<'PROJECT_SWIFT'
+# Create Project.swift — full contents below.
+
+# 2. import Core no longer exists. The app files need the real modules.
+#    Crude, and honest: you would tidy these per-file eventually.
+grep -rl '^import Core$' RockyFeed | while read -r f; do
+  perl -i -pe 's/^import Core$/import DesignSystem\nimport Images\nimport Models\nimport Domain/' "$f"
+done
+
+# 3. Four files inside Core now cross a module boundary.
+perl -i -pe 's/^import SwiftUI$/import DesignSystem\nimport SwiftUI/' \
+  Core/Sources/Core/Images/RemoteImage.swift
+perl -i -pe 's/^import Foundation$/import Models\nimport Foundation/' \
+  Core/Sources/Core/Session/UserSession.swift \
+  Core/Sources/Core/Ranking/RelevanceScoring.swift
+perl -i -pe 's/^import Foundation$/import Models\nimport Networking\nimport Foundation/' \
+  Core/Sources/Core/Feed/FeedService.swift
+
+# 4. Regenerate.
+tuist generate --no-open
+
+# 5. Measure both, the same two shapes as Task 1, new export paths.
+export BUILD="xcodebuild build \
+  -workspace RockyFeed.xcworkspace \
+  -scheme RockyFeed \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath ../.workshop/DerivedData \
+  -quiet"
+
+# Clean build — expect this to be SLOWER than Task 1.
+hyperfine --runs 3 --warmup 1 \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/split-clean-build.json \
+  "$BUILD"
+
+# Incremental build — expect this to be FASTER than Task 1.
+hyperfine --runs 3 --warmup 1 \
+  --prepare 'touch RockyFeed/RootView.swift' \
+  --export-json ../.workshop/measurements/split-incremental-build.json \
+  "$BUILD"
+
+# Then: Validate my work, and What did it cost.
+```
+
+**`Project.swift`** — type this out:
+
+```swift
 import ProjectDescription
 
 // RockyFeed, with the god module taken apart.
@@ -771,47 +824,6 @@ let project = Project(
         ),
     ]
 )
-PROJECT_SWIFT
-
-# 2. import Core no longer exists. The app files need the real modules.
-#    Crude, and honest: you would tidy these per-file eventually.
-grep -rl '^import Core$' RockyFeed | while read -r f; do
-  perl -i -pe 's/^import Core$/import DesignSystem\nimport Images\nimport Models\nimport Domain/' "$f"
-done
-
-# 3. Four files inside Core now cross a module boundary.
-perl -i -pe 's/^import SwiftUI$/import DesignSystem\nimport SwiftUI/' \
-  Core/Sources/Core/Images/RemoteImage.swift
-perl -i -pe 's/^import Foundation$/import Models\nimport Foundation/' \
-  Core/Sources/Core/Session/UserSession.swift \
-  Core/Sources/Core/Ranking/RelevanceScoring.swift
-perl -i -pe 's/^import Foundation$/import Models\nimport Networking\nimport Foundation/' \
-  Core/Sources/Core/Feed/FeedService.swift
-
-# 4. Regenerate.
-tuist generate --no-open
-
-# 5. Measure both, the same two shapes as Task 1, new export paths.
-export BUILD="xcodebuild build \
-  -workspace RockyFeed.xcworkspace \
-  -scheme RockyFeed \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath ../.workshop/DerivedData \
-  -quiet"
-
-# Clean build — expect this to be SLOWER than Task 1.
-hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
-  --export-json ../.workshop/measurements/split-clean-build.json \
-  "$BUILD"
-
-# Incremental build — expect this to be FASTER than Task 1.
-hyperfine --runs 3 --warmup 1 \
-  --prepare 'touch RockyFeed/RootView.swift' \
-  --export-json ../.workshop/measurements/split-incremental-build.json \
-  "$BUILD"
-
-# Then: Validate my work, and What did it cost.
 ```
 
 **Show the solved state:**
@@ -973,7 +985,41 @@ until you regenerate it.
 #    Project.swift swaps .package(product:) for .external(name:), and a new
 #    Tuist/Package.swift lists the packages. Take both verbatim from the branch:
 mkdir -p Tuist
-cat > Project.swift <<'PROJECT_SWIFT'
+# Create Project.swift — full contents below.
+# Create Tuist/Package.swift — full contents below.
+printf 'app/Tuist/.build/\n' >> ../.gitignore  # the repo-root ignore
+
+# 2. Resolve them, now that they are Tuist-managed.
+tuist install
+
+# 3. Warm the module cache. Slow the first time: it is building every module
+#    once and storing it. You have seen this trade before.
+tuist cache
+
+# 4. Generate with the app focused. Everything else arrives as a binary.
+#    Read what it prints: those are the targets it is not going to build.
+tuist generate RockyFeed --no-open
+
+# 5. Same clean build as every other task.
+export BUILD="xcodebuild build \
+  -workspace RockyFeed.xcworkspace \
+  -scheme RockyFeed \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath ../.workshop/DerivedData \
+  COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex \
+  -quiet"
+
+hyperfine --runs 3 --warmup 1 \
+  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
+  --export-json ../.workshop/measurements/module-cache-clean-build.json \
+  "$BUILD"
+
+# Then: Validate my work, and Was it worth it.
+```
+
+**`Project.swift`** — type this out:
+
+```swift
 import ProjectDescription
 
 // RockyFeed, with the god module taken apart.
@@ -1176,8 +1222,11 @@ let project = Project(
         ),
     ]
 )
-PROJECT_SWIFT
-cat > Tuist/Package.swift <<'PACKAGE_SWIFT'
+```
+
+**`Tuist/Package.swift`** — type this out:
+
+```swift
 // swift-tools-version: 6.0
 import PackageDescription
 
@@ -1188,35 +1237,6 @@ let package = Package(
         .package(url: "https://github.com/onevcat/Kingfisher", from: "7.11.0"),
     ]
 )
-PACKAGE_SWIFT
-printf 'app/Tuist/.build/\n' >> ../.gitignore  # the repo-root ignore
-
-# 2. Resolve them, now that they are Tuist-managed.
-tuist install
-
-# 3. Warm the module cache. Slow the first time: it is building every module
-#    once and storing it. You have seen this trade before.
-tuist cache
-
-# 4. Generate with the app focused. Everything else arrives as a binary.
-#    Read what it prints: those are the targets it is not going to build.
-tuist generate RockyFeed --no-open
-
-# 5. Same clean build as every other task.
-export BUILD="xcodebuild build \
-  -workspace RockyFeed.xcworkspace \
-  -scheme RockyFeed \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath ../.workshop/DerivedData \
-  COMPILATION_CACHE_CAS_PATH=../.workshop/CompilationCache.noindex \
-  -quiet"
-
-hyperfine --runs 3 --warmup 1 \
-  --prepare 'rm -rf ../.workshop/DerivedData/Build' \
-  --export-json ../.workshop/measurements/module-cache-clean-build.json \
-  "$BUILD"
-
-# Then: Validate my work, and Was it worth it.
 ```
 
 **Show the solved state:**
