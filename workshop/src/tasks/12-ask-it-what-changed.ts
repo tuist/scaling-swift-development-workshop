@@ -3,7 +3,7 @@ import { brand } from "../theme.js";
 import { shell } from "../ui.js";
 import type { CheckResult, ValidationResult, WorkshopTask } from "./types.js";
 
-const brief = `${brand.bold("The last task is the one you will actually still be doing in March.")}
+const brief = `${brand.bold("The last task is the only one you will still be doing weeks from now.")}
 
 Everything so far was a change you made once. This one is a habit.
 

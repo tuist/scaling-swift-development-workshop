@@ -7,6 +7,39 @@ import { paths } from "./paths.js";
 import { brand, symbols } from "./theme.js";
 import { codeBlock, note } from "./ui.js";
 
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * A one-time confetti burst for finishing the whole workshop. Purely cosmetic —
+ * runValidation fires it only on the transition to all-tasks-complete.
+ */
+const celebrate = async (): Promise<void> => {
+  const sparks = ["✦", "✧", "❋", "✺", "✹", "•", "◦"];
+  const paints = [brand.accent, brand.success, brand.warn, brand.info, brand.accentDim];
+  const width = Math.min((process.stdout.columns ?? 60) - 2, 54);
+
+  process.stdout.write("\n");
+  for (let frame = 0; frame < 14; frame++) {
+    let line = "";
+    for (let i = 0; i < width; i++) {
+      if (Math.random() < 0.28) {
+        const spark = sparks[Math.floor(Math.random() * sparks.length)]!;
+        const paint = paints[Math.floor(Math.random() * paints.length)]!;
+        line += paint(spark);
+      } else {
+        line += " ";
+      }
+    }
+    process.stdout.write("\r" + line);
+    await sleep(70);
+  }
+  process.stdout.write("\r" + " ".repeat(width) + "\r");
+
+  console.log(brand.bold(brand.success("🎉  You made RockyFeed fast — and proved it, every number your own.")));
+  console.log(brand.dim("    Twelve tasks done. That was the whole point."));
+  console.log();
+};
+
 const statusMarker = (task: WorkshopTask, completed: number[]): string =>
   completed.includes(task.id) ? symbols.pass : symbols.pending;
 
@@ -58,10 +91,16 @@ const runValidation = async (task: WorkshopTask): Promise<void> => {
   if (result.report) note(result.report, "Your numbers");
 
   if (passed) {
+    const before = (await loadState()).completed.length;
     await markCompleted(task.id);
     p.log.success(`Task ${task.id} complete.`);
     const upcoming = followingTask(task);
-    if (upcoming) {
+    const nowComplete = (await loadState()).completed.length === tasks.length;
+    if (nowComplete && before < tasks.length) {
+      // The whole workshop just came together. Fire the confetti once, on the
+      // transition — not every time someone re-validates the last task.
+      await celebrate();
+    } else if (upcoming) {
       p.log.info(
         `Next up: ${brand.accent(`${upcoming.id}. ${upcoming.title}`)} — ` +
           `pick ${brand.success("Continue")} below.`,
