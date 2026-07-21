@@ -113,11 +113,19 @@ const commands = shell(`# Run from app/, one at a time.
 #    and typing five .target(...) blocks is not.
 git show solutions/04:app/Project.swift > Project.swift
 
-# 2. import Core no longer exists. The app files need the real modules.
-#    Crude, and honest: you would tidy these per-file eventually.
+# 2. import Core no longer exists. Give every former Core file the three modules
+#    every feature target depends on: DesignSystem, Domain, Models. (Crude but
+#    honest — an unused import is a warning; you would tidy these per-file later.)
 grep -rl '^import Core$' RockyFeed | while read -r f; do
-  perl -i -pe 's/^import Core$/import DesignSystem\\nimport Images\\nimport Models\\nimport Domain/' "$f"
+  perl -i -pe 's/^import Core$/import DesignSystem\\nimport Domain\\nimport Models/' "$f"
 done
+#    Images is different: only FeaturePlayer and FeatureProfile depend on it, and
+#    only their two screens render a remote image. So add Images to just those two.
+#    Put it in a feature that does not depend on it and it is a hard "no such module
+#    Images" error, not a warning.
+perl -i -pe 's/^import Domain$/import Domain\\nimport Images/' \\
+  RockyFeed/Features/Player/PlayerView.swift \\
+  RockyFeed/Features/Profile/ProfileView.swift
 
 # 3. Four files inside Core now cross a module boundary.
 perl -i -pe 's/^import SwiftUI$/import DesignSystem\\nimport SwiftUI/' \\
