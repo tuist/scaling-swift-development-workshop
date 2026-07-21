@@ -25,7 +25,7 @@ watching the binaries come back from somewhere else.
 
   ${brand.dim("·")} warm the remote cache from this machine
   ${brand.dim("·")} delete your local binaries entirely
-  ${brand.dim("·")} warm again, and read the hit counts
+  ${brand.dim("·")} generate, and watch the binaries come down from the server
 
 ${brand.dim("The last step is the only one that proves anything. Anyone can upload.")}`;
 
@@ -33,21 +33,22 @@ const hint = `${brand.bold("You already did the setup")}
 The ${brand.dim("fullHandle")} from task 10 is the whole configuration. ${brand.dim("tuist cache")} has been
 trying to talk to a server this entire time; until task 10 there was not one.
 
-Run ${brand.dim("tuist cache")} now and read the last line. It has been telling you the answer
-all along:
-
-  ${brand.dim("Cache warm summary: 0 remote hits, 4 local hits, 11 misses")}
+${brand.dim("tuist cache")} now does two things at once: it builds each module and ${brand.bold("uploads")}
+the binary to the server. Its summary reports hits, misses, and what got stored — but
+a cache summary on your own machine is not proof. That comes next.
 
 ${brand.bold("Proving it, rather than hoping")}
-A second ${brand.dim("tuist cache")} on the same machine hits the ${brand.bold("local")} cache and proves
-nothing — you would be reading your own homework. The only honest test is to
-destroy the local copy and see whether the build still finds them.
+Warming again on the same machine reads your ${brand.bold("local")} copy and proves nothing — you
+would be reading your own homework. The only honest test is to destroy the local
+copy and watch the build fetch the modules from somewhere else.
 
-The local binaries live in ${brand.accent("~/.cache/tuist/Binaries")}. Delete that directory. That
-is not a trick or a special mode: it is exactly the state a new colleague or a
-fresh CI runner is in, every time.
+The local binaries live in ${brand.accent("~/.cache/tuist/Binaries")}. Delete that directory — it
+is exactly the state a new colleague or a fresh CI runner is in, every time — then
+run ${brand.dim("tuist generate RockyFeed")} and read what it prints:
 
-${brand.dim("Watch the counts flip. That flip is the entire task.")}
+  ${brand.dim("Using cache binaries for the following targets: ...")}
+
+${brand.dim("Those modules are coming down from the server. That line is the entire task.")}
 
 ${brand.bold("⚠️ Do not run tuist cache config on a projector")}
 It prints your cache token — a live credential with read and write access to
@@ -62,25 +63,29 @@ cache is still yours alone — see the last reveal for why that is harder.`;
 
 const commands = shell(`# Run from app/, one at a time.
 
-# 1. Warm it. With a fullHandle set, this now pushes to the server too.
-#    Read the last line: it tells you hits, misses, and where they came from.
-tuist cache
-
-# 2. Become a new teammate: throw away every binary you have locally.
-#    This is not a simulation. It is the state everyone else is in.
+# 1. Start as a fresh machine: throw away every binary you have locally. Nothing is
+#    on the server yet either — you set the handle in task 10 but never warmed it.
 rm -rf ~/.cache/tuist/Binaries
 
-# 3. Generate the focused project now, before pulling anything back. With no local
-#    binaries there is nothing to swap in, so the modules come back as source you
-#    would have to compile. That is a cache of one, with its one member gone.
+# 2. Generate the focused project, before warming anything. Local is empty and the
+#    remote is empty, so there is nothing to pull: the modules come in as source you
+#    would have to compile, with no "Using cache binaries" line. A cache of one, with
+#    its one member gone.
 tuist generate RockyFeed --no-open
 
-# 4. Now sync with the server. tuist cache pulls the binaries you deleted back
-#    down — the exact ones you uploaded in step 1.
+# 3. Warm the cache. With the fullHandle set, this builds each module once and
+#    UPLOADS the binaries to the server — where teammates and CI can reach them.
 tuist cache
 
-# 5. Generate again. This time the modules are swapped in as prebuilt binaries,
-#    fetched from a machine that isn't yours. That is the whole point.
+# 4. Become the fresh machine one more time. The difference now: the server has the
+#    binaries; your laptop does not. (Delete again, or step 5 just reads the local
+#    copy the warm repopulated and proves nothing.)
+rm -rf ~/.cache/tuist/Binaries
+
+# 5. Generate again. Local is empty, so tuist pulls the binaries straight from the
+#    remote — watch "Using cache binaries for the following targets". This machine
+#    compiled none of them. (On a weak network that download is slow and visible;
+#    it is real, and why you run the server tasks on a solid connection.)
 tuist generate RockyFeed --no-open
 
 # Then: Validate my work, and So who is this actually for.`);
@@ -111,18 +116,20 @@ const validate = async (): Promise<ValidationResult> => {
     checks,
     hint:
       "Set the handle in task 10 first. Then `tuist cache`, delete ~/.cache/tuist/Binaries, and " +
-      "`tuist cache` again — the hit counts are the proof.",
+      "`tuist generate RockyFeed` — the \"Using cache binaries\" line is the proof.",
   };
 };
 
 const whoIsItFor = `${brand.bold("What you should have seen")}
 
-  ${brand.dim("before")}   Cache warm summary: 0 remote hits, 4 local hits, 11 misses
-  ${brand.dim("after")}    Cache warm summary: ${brand.success("11 remote hits")}, 0 local hits, 4 misses
+  ${brand.dim("first generate")}  local and remote both empty — modules arrive as source, no cache line
+  ${brand.dim("last generate")}   ${brand.success("Using cache binaries for the following targets: ...")}
 
-Eleven modules that this machine did not compile. Ours came down in ${brand.bold("6 seconds")},
-against roughly ${brand.bold("20s")} to build them from source — and that 20s is on a warm laptop
-that had already resolved its packages. A real first morning is worse than that.
+Eleven modules that this machine never compiled, pulled straight from the server.
+Building them from source is roughly ${brand.bold("20s")} on a warm laptop that has already
+resolved its packages — and a real first morning, on a fresh machine, is worse. The
+pull itself is bandwidth-bound: quick on a solid link, slow and very visible on a
+weak one — which is exactly why the server tasks want a real connection.
 
 ${brand.bold("So who is this for?")}
 Not you. You already had those binaries. It is for:
@@ -170,13 +177,12 @@ export const task11: WorkshopTask = {
   solutionBranch: "solutions/09",
   stuckNote:
     `Nothing to check out — this task is your account, your cache, your machine.\n\n` +
-    `${brand.bold("If the counts do not flip:")}\n\n` +
-    `  ${brand.dim("still local hits")}      → you deleted the wrong directory. It is\n` +
-    `                        ${brand.accent("~/.cache/tuist/Binaries")}, not ~/.cache/tuist/BinaryCache.\n` +
-    `                        ${brand.dim("We got that wrong first too and read 15 local hits as a pass.")}\n` +
-    `  ${brand.dim("0 remote hits, all misses")} → nothing was ever uploaded. Check the handle,\n` +
-    `                        and that the first ${brand.accent("tuist cache")} said "stored".\n` +
-    `  ${brand.dim("upload hangs")}         → bandwidth, same as task 10.\n\n` +
-    `${brand.dim("Alamofire and Kingfisher stay as misses even on a good day — external")}\n` +
-    `${brand.dim("packages are cached separately. Eleven of fifteen is the win.")}`,
+    `${brand.bold("If the last generate does not say \"Using cache binaries\":")}\n\n` +
+    `  ${brand.dim("modules arrive as source")} → you deleted the wrong directory. It is\n` +
+    `                           ${brand.accent("~/.cache/tuist/Binaries")}, not ~/.cache/tuist/BinaryCache.\n` +
+    `  ${brand.dim("nothing is pulled")}        → nothing was ever uploaded. Check the handle,\n` +
+    `                           and that the first ${brand.accent("tuist cache")} said "stored".\n` +
+    `  ${brand.dim("the download hangs")}       → bandwidth, same as task 10.\n\n` +
+    `${brand.dim("Alamofire and Kingfisher will not appear in that line — external packages")}\n` +
+    `${brand.dim("are cached separately. Eleven of fifteen modules is the win.")}`,
 };

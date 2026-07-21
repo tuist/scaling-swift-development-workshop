@@ -1745,25 +1745,29 @@ it is a shared cache of nothing.
 ```sh
 # Run from app/, one at a time.
 
-# 1. Warm it. With a fullHandle set, this now pushes to the server too.
-#    Read the last line: it tells you hits, misses, and where they came from.
-tuist cache
-
-# 2. Become a new teammate: throw away every binary you have locally.
-#    This is not a simulation. It is the state everyone else is in.
+# 1. Start as a fresh machine: throw away every binary you have locally. Nothing is
+#    on the server yet either — you set the handle in task 10 but never warmed it.
 rm -rf ~/.cache/tuist/Binaries
 
-# 3. Generate the focused project now, before pulling anything back. With no local
-#    binaries there is nothing to swap in, so the modules come back as source you
-#    would have to compile. That is a cache of one, with its one member gone.
+# 2. Generate the focused project, before warming anything. Local is empty and the
+#    remote is empty, so there is nothing to pull: the modules come in as source you
+#    would have to compile, with no "Using cache binaries" line. A cache of one, with
+#    its one member gone.
 tuist generate RockyFeed --no-open
 
-# 4. Now sync with the server. tuist cache pulls the binaries you deleted back
-#    down — the exact ones you uploaded in step 1.
+# 3. Warm the cache. With the fullHandle set, this builds each module once and
+#    UPLOADS the binaries to the server — where teammates and CI can reach them.
 tuist cache
 
-# 5. Generate again. This time the modules are swapped in as prebuilt binaries,
-#    fetched from a machine that isn't yours. That is the whole point.
+# 4. Become the fresh machine one more time. The difference now: the server has the
+#    binaries; your laptop does not. (Delete again, or step 5 just reads the local
+#    copy the warm repopulated and proves nothing.)
+rm -rf ~/.cache/tuist/Binaries
+
+# 5. Generate again. Local is empty, so tuist pulls the binaries straight from the
+#    remote — watch "Using cache binaries for the following targets". This machine
+#    compiled none of them. (On a weak network that download is slow and visible;
+#    it is real, and why you run the server tasks on a solid connection.)
 tuist generate RockyFeed --no-open
 
 # Then: Validate my work, and So who is this actually for.
