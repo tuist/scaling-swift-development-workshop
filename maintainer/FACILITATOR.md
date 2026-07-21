@@ -901,6 +901,12 @@ is bandwidth-bound) which sets up task 6.
 ```sh
 # Run these from app/, one at a time, and watch each one.
 
+# 1. Turn on compilation caching. It is a project-wide build setting, and because the
+#    project is generated, it belongs in the manifest, not the Xcode UI (the next
+#    tuist generate would silently erase a click there). Add a project settings base:
+perl -i -pe 's/^    targets: \[$/    settings: .settings(base: ["COMPILATION_CACHE_ENABLE_CACHING": "YES"]),\n    targets: [/' Project.swift
+tuist generate --no-open
+
 # If BUILD is no longer set in this shell:
 export BUILD="xcodebuild build \
   -workspace RockyFeed.xcworkspace \
@@ -910,7 +916,7 @@ export BUILD="xcodebuild build \
   COMPILATION_CACHE_CAS_PATH=$(pwd)/../.workshop/CompilationCache.noindex \
   -quiet"
 
-# 1. Clean build with the cache warm.
+# 2. Clean build with the cache warm.
 #    The --warmup run does double duty here: it fills the cache, so every
 #    timed run is reading one rather than writing one.
 hyperfine --runs 3 --warmup 1 \
@@ -918,7 +924,7 @@ hyperfine --runs 3 --warmup 1 \
   --export-json ../.workshop/measurements/cached-clean-build.json \
   "$BUILD"
 
-# 2. Clean build with the cache cold. Products and cache both gone before
+# 3. Clean build with the cache cold. Products and cache both gone before
 #    each run: a fresh CI runner, or the morning after an Xcode update.
 #    One run, because it is the expensive one.
 hyperfine --runs 1 \
@@ -1096,6 +1102,7 @@ func feature(_ name: String, needsImages: Bool = false) -> Target {
 
 let project = Project(
     name: "RockyFeed",
+    settings: .settings(base: ["COMPILATION_CACHE_ENABLE_CACHING": "YES"]),
     targets: [
         // The app is now three files: it starts up and picks a tab.
         .target(
