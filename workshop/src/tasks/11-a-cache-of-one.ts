@@ -70,12 +70,18 @@ tuist cache
 #    This is not a simulation. It is the state everyone else is in.
 rm -rf ~/.cache/tuist/Binaries
 
-# 3. Warm again. The counts should flip: remote hits where local hits were.
+# 3. Generate the focused project now, before pulling anything back. With no local
+#    binaries there is nothing to swap in, so the modules come back as source you
+#    would have to compile. That is a cache of one, with its one member gone.
+tuist generate RockyFeed --no-open
+
+# 4. Now sync with the server. tuist cache pulls the binaries you deleted back
+#    down — the exact ones you uploaded in step 1.
 tuist cache
 
-# 4. And the build that follows is the one from task 6, on a machine that
-#    compiled none of it.
-tuist generate --no-open
+# 5. Generate again. This time the modules are swapped in as prebuilt binaries,
+#    fetched from a machine that isn't yours. That is the whole point.
+tuist generate RockyFeed --no-open
 
 # Then: Validate my work, and So who is this actually for.`);
 
