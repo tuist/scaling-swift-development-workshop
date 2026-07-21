@@ -1431,6 +1431,40 @@ build — pure overhead on every incremental they measured in Task 1).
 Watch for the trap: declaring `inputPaths`/`outputPaths` achieves **nothing**
 while `basedOnDependencyAnalysis: false` stays. Both, or neither works.
 
+**The exact `Project.swift` change.** The one edit is to the `RockyFeed` target's
+`scripts:` phase. After (`solutions/08`):
+
+```swift
+.post(
+    path: "Scripts/stamp-build-info.sh",
+    name: "Stamp build info",
+    inputPaths: ["$(SRCROOT)/../.git/HEAD"],
+    outputPaths: [
+        "$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/BuildStamp.plist",
+    ]
+),
+```
+
+Three edits from the before (`solutions/07`):
+1. **Delete** `basedOnDependencyAnalysis: false` — it told Xcode "don't check, just always run."
+2. **Add** `inputPaths: ["$(SRCROOT)/../.git/HEAD"]` — what the script reads. `$(SRCROOT)` is
+   `app/` and `.git` is one level up, so `../.git/HEAD`; it moves only when the commit changes.
+3. **Add** `outputPaths: [ … /BuildStamp.plist ]` — what it writes, so Xcode knows when the
+   output is already up to date.
+
+**The output path, decoded** (this question always comes up):
+- `$(BUILT_PRODUCTS_DIR)` — where the build drops finished products for this config+platform
+  (e.g. `…/Build/Products/Debug-iphonesimulator`).
+- `$(UNLOCALIZED_RESOURCES_FOLDER_PATH)` — the resources folder *inside* the product, relative to
+  that. iOS app → `RockyFeed.app`; macOS → `RockyFeed.app/Contents/Resources`; framework →
+  `Foo.framework/…`. So the whole thing resolves to `…/Debug-iphonesimulator/RockyFeed.app/BuildStamp.plist`.
+- **Why variables, not a literal path:** (i) portable across config/platform/product-type; (ii) it
+  must resolve to the *exact* file the script writes — `Scripts/stamp-build-info.sh` builds its
+  `RESOURCES_DIR` from the *same two variables*, so both sides agree and Xcode's dependency check
+  finds the output and skips the phase. Off by one directory and Xcode re-runs on every build.
+- Syntax: `$(NAME)` in `Project.swift` (Xcode build-setting form) vs `${NAME}` in the shell script —
+  Xcode exports build settings as env vars into the run-script.
+
 **The same lie, one level up — implicit dependencies (facilitator).** The stamp phase
 read `.git/HEAD` and wrote a plist without *declaring* either, so the build system
 couldn't reason about it. The module graph has the identical failure mode: an
