@@ -151,6 +151,15 @@ Most people will follow your lead, so **you drive and they mirror.** For each ta
    solved state** block under each task has the checkout recipe.
 5. **Discuss** before moving on. The discussion beats are in each task's section.
 
+**Have them commit after each task passes.** `git add -A && git commit -m "task N"`
+gives every attendee a per-task checkpoint: if a later task — or the flaky test, or a
+stray edit — breaks the build, they reset to the last green commit instead of unpicking
+it by hand, with the solution branch always there as a longer fallback. Generated files
+(the project, `.workshop/`, `.build/`, `RockyFeed.xcworkspace/`) are gitignored, so each
+commit stays to the source that matters: `Project.swift`, the module imports, the stamp
+script, `ci.yml`. Task 3's `git rm --cached` of the pbxproj just rides along in that
+task's commit, which is correct.
+
 Those two blocks are generated from the task source by **`mise run cheatsheet`**,
 so they can't drift from what attendees actually see. Re-run it after any task
 change. Don't hand-edit between the `<!-- COMMANDS -->` markers — it gets
