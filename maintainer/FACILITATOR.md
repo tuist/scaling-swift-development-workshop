@@ -1656,8 +1656,16 @@ Attendees each need their own account: `tuist auth login`, then
 builds into a project they can't read. The validator catches exactly that
 copy-paste and says so.
 
-**`tuist xcodebuild` uploads insights by itself.** The docs point at a scheme
-post-action; that's for builds started inside Xcode. In a terminal it's unnecessary.
+**Insights wire themselves up — nobody adds a phase.** The moment `fullHandle` is set
+and you regenerate, Tuist adds a **`tuist inspect build`** post-action to *every*
+scheme (visible in Xcode under Build ▸ Post-actions; it bakes the absolute tuist path,
+so it needs no PATH setup). Builds started in Xcode report their metrics through that
+phase; builds from the terminal report through `tuist xcodebuild`, which wraps the
+same call. Either way it's automatic — the handle does it, and it does nothing before
+the handle exists (nowhere to send). This is the loop closing: **set the handle →
+every build self-reports → Task 12's MCP has data to answer questions about.** When
+someone asks in Task 12 where the build history comes from, it's this — generated for
+free the instant the project knew its handle.
 
 Be honest about the payoff: **one build is one dot.** It's worth doing now because
 it's worthless in a month if you don't.
