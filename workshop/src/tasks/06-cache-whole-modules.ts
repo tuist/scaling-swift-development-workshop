@@ -1,5 +1,6 @@
 import { buildEnvGeneratedCached, cleanBuild, labels, tuistCache, tuistGenerateFocused } from "../commands.js";
-import { generatedSchemes, readMeasurement } from "../measure.js";
+import { readMeasurement } from "../measure.js";
+import { readCode } from "../source.js";
 import { renderComparison } from "../report.js";
 import { brand, formatDuration } from "../theme.js";
 import { shell } from "../ui.js";
@@ -130,8 +131,13 @@ ${cleanBuild(labels.moduleCacheClean)}
 const validate = async (): Promise<ValidationResult> => {
   const checks: CheckResult[] = [];
 
-  const schemes = await generatedSchemes();
-  const split = schemes.filter((s) => s.startsWith("Core") || s.startsWith("Feature")).length >= 3;
+  // Task 6 runs `tuist generate RockyFeed` — focused generation, which turns every
+  // module into a cached binary with no scheme of its own. So the workspace lists
+  // only RockyFeed's schemes, and asking `generatedSchemes()` here always reports a
+  // monolith. Ask the manifest instead (the same source of truth Task 8 reads).
+  const manifest = await readCode("app/Project.swift");
+  const moduleTargets = ["Models", "Networking", "Domain", "DesignSystem", "Images"];
+  const split = moduleTargets.filter((m) => manifest.includes(`name: "${m}"`)).length >= 3;
   checks.push({
     label: "The project still has modules to cache",
     ok: split,
