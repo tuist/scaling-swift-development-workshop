@@ -145,6 +145,13 @@ export const serialCleanBuild = (label: string, runs = 1): string =>
 export const incrementalEditFile = "RockyFeed/RootView.swift";
 
 /**
+ * A feature source file, touched to simulate the everyday "I changed one feature"
+ * edit. Nothing in the test suite depends on it — which is the whole point of Task
+ * 7: the naive runner re-tests everything anyway, the selective one skips it.
+ */
+export const featureEditFile = "RockyFeed/Features/Settings/SettingsView.swift";
+
+/**
  * An incremental build: edit one file, rebuild.
  *
  * `touch` bumps the file's mtime before each timed run, which is enough to make
@@ -178,17 +185,25 @@ export const tuistCache = `tuist cache`;
 export const tuistGenerateFocused = `tuist generate RockyFeed --no-open`;
 
 /**
- * Run the whole test suite, every test, every time. The status quo.
+ * The everyday scenario: change one feature, then run the whole test suite — every
+ * test, every time, including the ones that have nothing to do with your change.
+ * The status quo, and the baseline Task 7's selective runner improves on.
  *
- * Points at the workspace Tuist generates, so it is the same suite either way.
+ * `--prepare` touches a feature before each run so we measure the real cost of a
+ * change (incremental rebuild + full suite), not a one-off from-clean run. `--warmup`
+ * builds the tree first so run 1 is not measuring a cold build. `--ignore-failure`
+ * because the suite still contains the flaky test this task is about — without it a
+ * single flaky failure aborts the whole benchmark. Points at the workspace Tuist
+ * generates, so it is the same suite either way.
  */
-export const testEverything = (label: string, runs = 1): string =>
-  `hyperfine --runs ${runs} \\
+export const testEverything = (label: string, runs = 3): string =>
+  `hyperfine --runs ${runs} --warmup 1 --ignore-failure \\
+  --prepare 'touch ${featureEditFile}' \\
   --export-json ${exportPath(label)} \\
   "xcodebuild test \\
     -workspace ${workspace} \\
     -scheme RockyFeed-Workspace \\
-    -destination 'platform=iOS Simulator,name=iPhone 17e' \\
+    -destination 'platform=iOS Simulator,name=iPhone 17' \\
     -derivedDataPath ${derivedData} \\
     -quiet"`;
 

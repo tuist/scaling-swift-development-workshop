@@ -1354,13 +1354,15 @@ code telling you so.**
 ```sh
 # Run these from app/, one at a time.
 
-# 1. The whole suite, every test, every time. This is CI today.
-hyperfine --runs 1 \
+# 1. Change one feature, then run the whole suite — every test, even the ones that
+#    could not care less about your change. Timed across several runs. This is CI today.
+hyperfine --runs 3 --warmup 1 --ignore-failure \
+  --prepare 'touch RockyFeed/Features/Settings/SettingsView.swift' \
   --export-json ../.workshop/measurements/test-everything.json \
   "xcodebuild test \
     -workspace RockyFeed.xcworkspace \
     -scheme RockyFeed-Workspace \
-    -destination 'platform=iOS Simulator,name=iPhone 17e' \
+    -destination 'platform=iOS Simulator,name=iPhone 17' \
     -derivedDataPath ../.workshop/DerivedData \
     -quiet"
 

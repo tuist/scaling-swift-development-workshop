@@ -68,7 +68,8 @@ ${brand.dim("A test that measures the weather is not testing your code.")}`;
 
 const commands = shell(`# Run these from app/, one at a time.
 
-# 1. The whole suite, every test, every time. This is CI today.
+# 1. Change one feature, then run the whole suite — every test, even the ones that
+#    could not care less about your change. Timed across several runs. This is CI today.
 ${testEverything(labels.testAll)}
 
 # 2. Now Tuist's runner. First run does the work...
