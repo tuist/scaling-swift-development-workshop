@@ -5,6 +5,7 @@
 # the workshop we make it fast on CI too (caching the install step).
 [tools]
 node = "24"
+tuist = "4.202.0"
 
 # hyperfine via `ubi` rather than the default `aqua` backend.
 #
