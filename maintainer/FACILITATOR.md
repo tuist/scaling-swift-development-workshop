@@ -1015,6 +1015,29 @@ point at it, and it's the most useful thing they take home:
 > "Splitting isn't a thing you finish. The shape decides what a change costs, and
 > your shape still has a bottleneck in it."
 
+**Show it, don't just say it (facilitator demo).** `--print-hashes` computes every
+module's cache key *without building*, so you can prove the sharp edge live in
+seconds — take the hashes, change one file, take them again, and watch which moved:
+
+```sh
+tuist cache --print-hashes                 # the 11 module hashes
+
+# Deep: Networking, which every feature reaches through Domain.
+echo "// x" >> Core/Sources/Core/Networking/NetworkClient.swift
+tuist cache --print-hashes                 # 8 of 11 move: Networking, Domain, all 6 features
+git checkout -- Core/Sources/Core/Networking/NetworkClient.swift
+
+# Leaf: a feature nothing depends on.
+echo "// x" >> RockyFeed/Features/Settings/SettingsView.swift
+tuist cache --print-hashes                 # 1 of 11 moves: just FeatureSettings
+git checkout -- RockyFeed/Features/Settings/SettingsView.swift
+```
+
+A module's key folds in the keys of everything it depends on, so a change flows
+*upward*: touch Networking and Domain — plus every feature above it — gets a new key.
+Touch a leaf feature and nothing sits above it, so exactly one moves. Same
+one-character edit, 8× the cost, decided by where in the graph it lands.
+
 **Watch out for:** someone whose cache does nothing because they never ran
 `tuist generate` after `tuist cache` — warming the cache doesn't change the project
 until you regenerate it.
