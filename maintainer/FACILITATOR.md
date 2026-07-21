@@ -1713,6 +1713,39 @@ full (see below). If you want it, something else comes out.
 
 ---
 
+## Bonus, if you somehow have time: take the compilation cache remote
+
+Task 11 leaves one thread hanging on purpose — the compilation cache from Task 5 is
+"still yours alone," because sharing a latency-bound, per-compile-job CAS over a
+network is the hard case. Tuist now productizes exactly that, as a **remote Xcode
+compilation cache**. You almost certainly won't reach it (see the budget below), but
+it's the satisfying close to the two-caches story if the room is flying — and a real
+answer to the cliffhanger the workshop sets up.
+
+It builds straight on Task 10 (a Tuist account + `fullHandle`, authenticated) and
+needs **Xcode 26+**. For the generated project it's two steps:
+
+```sh
+# 1. Set up the cache daemon: a local socket + LaunchAgent, backed by the remote CAS.
+tuist setup cache
+
+# 2. Turn it on. For a generated project there are NO manual build settings — add
+#    `enableCaching: true` to Tuist.swift and Tuist wires the COMPILATION_CACHE_*
+#    settings for you. Then regenerate and build.
+tuist generate --no-open
+```
+
+This is the *compilation* cache going remote: per compile job, thousands of tiny
+objects, latency-bound. Distinct from the module cache (Tasks 6/10/11), which ships
+whole `.xcframework`s before the build and is bandwidth-bound. Same idea, opposite
+shape — which is why the talk treats them separately, and why the module cache is the
+one the workshop takes remote first.
+
+Do it live off the current docs, since the API may move:
+<https://tuist.dev/en/docs/guides/features/cache/xcode-cache>
+
+---
+
 ## Is this a full day? Yes — arguably too full.
 
 | | |
