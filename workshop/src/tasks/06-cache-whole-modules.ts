@@ -17,9 +17,10 @@ Task 5's cache works one ${brand.bold("compile job")} at a time. This one works 
 ${brand.bold("modules")}: build a module once, store the binary, and next time swap the target for
 the binary and don't build it at all.
 
-That only works if your project ${brand.bold("has")} modules. A monolith has one giant one, and
-one giant one is the worst possible unit to cache — change any file in it and the
-whole thing misses.
+And you already ${brand.bold("have")} them — you carved these modules out in Task 4, and nothing
+here splits anything further. That is the whole reason this pays off now: a monolith is
+one giant module, the worst possible thing to cache (change one file and it all misses),
+and you stopped being one two tasks ago.
 
 ${brand.bold("First, a piece of unfinished business.")}
 Your dependencies came in as Xcode-native SPM in Task 3, and ${brand.dim("tuist cache")} cannot
