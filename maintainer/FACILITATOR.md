@@ -1413,7 +1413,7 @@ tuist test
 git checkout solutions/07
 cd app && tuist install && tuist generate --no-open
 tuist test && tuist test    # second run skips — nothing changed
-# Then touch a test and run again to show it notices.
+# Then EDIT a test (a comment is enough — tuist hashes contents, not mtime) and rerun.
 ```
 
 <!-- COMMANDS:7:END -->
