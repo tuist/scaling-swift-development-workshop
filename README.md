@@ -34,52 +34,49 @@ two years.
 > RockyFeed is small on purpose. It's slow enough that the problems are real and
 > measurable, but not so slow that you spend the day watching a progress bar.
 
-## Requirements
+## Getting started
 
-- **Xcode 26** (or newer) with an iOS simulator runtime
-- [**mise**](https://mise.jdx.dev/) — pins everything else
+You need **Xcode 26+** with an iOS simulator runtime, plus three CLI tools —
+**Node 24**, **Tuist 4.202**, and **hyperfine 1.20** (the exact versions are pinned in
+[`mise.toml`](mise.toml)). Set them up either way below.
+
+### With mise (recommended)
+
+[mise](https://mise.jdx.dev/) installs the pinned versions the whole room runs, so the
+workshop behaves identically on every machine — native on Apple Silicon, no Rosetta.
 
 ```bash
 git clone <this-repo>
 cd scaling-swift-development-workshop
-mise install     # Node, Tuist and hyperfine, pinned — native on Apple Silicon, no Rosetta needed
+mise install        # Node, Tuist, hyperfine — pinned
+mise run workshop   # launch the runner
 ```
-
-## Running the workshop
-
-```bash
-mise run workshop
-```
-
-The runner explains each task and checks your work. It does **not** do the work.
-You run the commands yourself, in your own terminal — you're here to leave able to
-do this to your own project, and nobody ever learned `hyperfine` by watching
-someone else's spinner.
 
 ### Without mise
 
-mise is the recommendation — it pins the exact versions the rest of the room is on,
-so the workshop behaves identically on every machine. But nothing here depends on it.
-If you would rather manage the tools yourself, install these three (the pinned
-versions live in [`mise.toml`](mise.toml)) and skip mise entirely:
-
-- **Node 24** — `brew install node@24`, or nvm
-- **Tuist 4.202** — `brew install tuist` (other installers at [tuist.dev](https://tuist.dev))
-- **hyperfine 1.20** — `brew install hyperfine`
-
-Then launch the runner directly instead of `mise run workshop`:
+Install the three tools yourself, then launch the runner directly:
 
 ```bash
-cd workshop
+brew install node@24 tuist hyperfine   # nvm works for Node; other Tuist installers at tuist.dev
+
+cd scaling-swift-development-workshop/workshop
 npm install
 npm start
 ```
 
 Everything the tasks have you run — `tuist …`, `xcodebuild …`, `hyperfine …` — is a
-plain command, so as long as those three are on your `PATH`, nothing else needs mise.
-The one thing you give up: `brew` installs the *latest* of each, which can drift from
-the pinned versions and quietly change your numbers. That drift is exactly what mise
-exists to prevent.
+plain command, so as long as those three are on your `PATH`, nothing here needs mise.
+The trade-off: `brew` installs the *latest* of each, which can drift from the pinned
+versions and quietly change your build numbers — exactly the drift mise prevents. If
+you use nvm, check that `node -v` shows 24 in the shell you launch from: the runner
+runs through `tsx`, and an old default Node fails it with a confusing ESM error.
+
+## Running the workshop
+
+The runner explains each task and checks your work. It does **not** do the work.
+You run the commands yourself, in your own terminal — you're here to leave able to
+do this to your own project, and nobody ever learned `hyperfine` by watching
+someone else's spinner.
 
 Each task states a goal and why it matters. The commands are there when you want
 them, behind **Give me a hint** and **Show me the commands** — but try first. The
