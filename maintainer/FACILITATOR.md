@@ -1395,8 +1395,10 @@ tuist test
 # ...and the second refuses to, because nothing changed.
 tuist test
 
-# 3. Prove it notices real changes: touch a test, run again.
-touch RockyFeedTests/ImageCacheTests.swift
+# 3. Prove it notices real changes — and make it a real change. Selective testing
+#    hashes a test target by its contents, not file timestamps, so a bare touch moves
+#    nothing it can see. Edit the file (a comment is enough), then run:
+echo "// nudge tuist" >> RockyFeedTests/ImageCacheTests.swift
 tuist test
 
 # 4. Then open that file and decide whether you would let it be skipped.

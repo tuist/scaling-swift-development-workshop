@@ -78,8 +78,10 @@ ${testSelective}
 # ...and the second refuses to, because nothing changed.
 ${testSelective}
 
-# 3. Prove it notices real changes: touch a test, run again.
-touch ${FLAKY.replace("app/", "")}
+# 3. Prove it notices real changes — and make it a real change. Selective testing
+#    hashes a test target by its contents, not file timestamps, so a bare touch moves
+#    nothing it can see. Edit the file (a comment is enough), then run:
+echo "// nudge tuist" >> ${FLAKY.replace("app/", "")}
 ${testSelective}
 
 # 4. Then open that file and decide whether you would let it be skipped.
