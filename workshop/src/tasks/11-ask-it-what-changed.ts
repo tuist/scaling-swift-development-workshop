@@ -145,8 +145,8 @@ it.
 
 ${brand.dim("Same rule as every task today. Do not trust it. Measure it.")}`;
 
-export const task12: WorkshopTask = {
-  id: 12,
+export const task11: WorkshopTask = {
+  id: 11,
   slug: "ask-it-what-changed",
   stage: "The server",
   title: "Ask it what changed",

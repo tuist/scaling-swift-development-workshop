@@ -122,20 +122,16 @@ const showcase: Record<number, string[]> = {
     "# Build twice into /tmp/build-a and /tmp/build-b, diff → silence is the pass.",
   ],
   9: [
-    "git checkout solutions/09",
-    "# Nothing to run — read .github/workflows/ci.yml together. The cache keys are the lesson.",
-  ],
-  10: [
     "git checkout solutions/09      # the final code state; the server tasks build on it",
     "# Live against the server: tuist auth login → project create → tuist inspect build.",
     "# NEEDS the network. If the room's upstream is weak, demo this from a wired connection.",
   ],
-  11: [
-    "# Still on solutions/09. Warm the remote cache, then pull it on a 'fresh' machine:",
-    "cd app && tuist cache        # stores remotely",
-    "rm -rf ~/.cache/tuist/Binaries && tuist cache   # 11 remote hits — that's the point",
+  10: [
+    "# Still on solutions/09. Prove the remote cache: warm + upload, delete local, generate.",
+    "cd app && tuist cache        # builds and uploads to the server",
+    "rm -rf ~/.cache/tuist/Binaries && tuist generate RockyFeed --no-open   # \"Using cache binaries\" = pulled from the server",
   ],
-  12: [
+  11: [
     "# Still on solutions/09. The MCP is a hosted endpoint, added once:",
     "claude mcp add --transport http tuist https://tuist.dev/mcp",
     "# Then authenticate it in an interactive session (/mcp) and ask it about your builds.",

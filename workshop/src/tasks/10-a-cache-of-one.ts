@@ -30,8 +30,8 @@ watching the binaries come back from somewhere else.
 ${brand.dim("The last step is the only one that proves anything. Anyone can upload.")}`;
 
 const hint = `${brand.bold("You already did the setup")}
-The ${brand.dim("fullHandle")} from task 10 is the whole configuration. ${brand.dim("tuist cache")} has been
-trying to talk to a server this entire time; until task 10 there was not one.
+The ${brand.dim("fullHandle")} from task 9 is the whole configuration. ${brand.dim("tuist cache")} has been
+trying to talk to a server this entire time; until task 9 there was not one.
 
 ${brand.dim("tuist cache")} now does two things at once: it builds each module and ${brand.bold("uploads")}
 the binary to the server. Its summary reports hits, misses, and what got stored — but
@@ -58,13 +58,13 @@ something to put on a screen in front of forty people.
 ${brand.bold("Both caches, not one")}
 You now have two: Xcode's compilation cache from task 5 (per compile job, the CAS
 under ${brand.dim(".workshop/")}) and Tuist's module cache from task 6 (per module,
-${brand.dim("~/.cache/tuist")}). Task 10's handle makes the module cache shared. The compilation
+${brand.dim("~/.cache/tuist")}). Task 9's handle makes the module cache shared. The compilation
 cache is still yours alone — see the last reveal for why that is harder.`;
 
 const commands = shell(`# Run from app/, one at a time.
 
 # 1. Start as a fresh machine: throw away every binary you have locally. Nothing is
-#    on the server yet either — you set the handle in task 10 but never warmed it.
+#    on the server yet either — you set the handle in task 9 but never warmed it.
 rm -rf ~/.cache/tuist/Binaries
 
 # 2. Generate the focused project, before warming anything. Local is empty and the
@@ -95,9 +95,9 @@ const validate = async (): Promise<ValidationResult> => {
 
   const handle = await tuistFullHandle();
   checks.push({
-    label: "The project is still wired up from task 10",
+    label: "The project is still wired up from task 9",
     ok: handle !== null,
-    detail: handle ? undefined : "No fullHandle in app/Tuist.swift — go back to task 10.",
+    detail: handle ? undefined : "No fullHandle in app/Tuist.swift — go back to task 9.",
   });
 
   // Asks whether the remote cache answers for this project. Deliberately does
@@ -115,7 +115,7 @@ const validate = async (): Promise<ValidationResult> => {
   return {
     checks,
     hint:
-      "Set the handle in task 10 first. Then `tuist cache`, delete ~/.cache/tuist/Binaries, and " +
+      "Set the handle in task 9 first. Then `tuist cache`, delete ~/.cache/tuist/Binaries, and " +
       "`tuist generate RockyFeed` — the \"Using cache binaries\" line is the proof.",
   };
 };
@@ -161,8 +161,8 @@ ${brand.dim("cache was +47% because filling one is not the same work as reading 
 ${brand.dim("a remote cache means the runner never fills anything — it only reads. That is")}
 ${brand.dim("the case the p99 bar in the talk was warning you about, and this is the fix.")}`;
 
-export const task11: WorkshopTask = {
-  id: 11,
+export const task10: WorkshopTask = {
+  id: 10,
   slug: "a-cache-of-one",
   stage: "The server",
   title: "A cache of one",
@@ -182,7 +182,7 @@ export const task11: WorkshopTask = {
     `                           ${brand.accent("~/.cache/tuist/Binaries")}, not ~/.cache/tuist/BinaryCache.\n` +
     `  ${brand.dim("nothing is pulled")}        → nothing was ever uploaded. Check the handle,\n` +
     `                           and that the first ${brand.accent("tuist cache")} said "stored".\n` +
-    `  ${brand.dim("the download hangs")}       → bandwidth, same as task 10.\n\n` +
+    `  ${brand.dim("the download hangs")}       → bandwidth, same as task 9.\n\n` +
     `${brand.dim("Alamofire and Kingfisher will not appear in that line — external packages")}\n` +
     `${brand.dim("are cached separately. Eleven of fifteen modules is the win.")}`,
 };

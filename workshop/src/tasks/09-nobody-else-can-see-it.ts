@@ -168,8 +168,8 @@ ${brand.dim("This is also what makes the next two tasks possible: the remote cac
 ${brand.dim("the same project, and the MCP has nothing to answer questions about until")}
 ${brand.dim("builds are flowing.")}`;
 
-export const task10: WorkshopTask = {
-  id: 10,
+export const task09: WorkshopTask = {
+  id: 9,
   slug: "nobody-else-can-see-it",
   stage: "The server",
   title: "Nobody else can see it",
